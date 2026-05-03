@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model tb_user {
+  id_user  Int    @id @default(autoincrement())
+  username String @unique
+  password String
+  role     String
+
+  mahasiswa tb_mahasiswa?
+  dosen     tb_dosen?
+}
+
+model tb_jurusan {
+  id_jurusan   Int            @id @default(autoincrement())
+  nama_jurusan String
+  mahasiswa    tb_mahasiswa[]
+}
+
+model tb_semester {
+  id_semester   Int            @id @default(autoincrement())
+  nama_semester String
+  mahasiswa     tb_mahasiswa[]
+}
+
+model tb_mahasiswa {
+  nim             String      @id
+  id_user         Int         @unique
+  nama_mahasiswa  String
+  id_jurusan      Int?
+  id_semester     Int?
+
+  user     tb_user      @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+  jurusan  tb_jurusan?  @relation(fields: [id_jurusan], references: [id_jurusan])
+  semester tb_semester? @relation(fields: [id_semester], references: [id_semester])
+
+  presensi tb_presensi[]
+  evaluasi tb_evaluasi[]
+}
+
+model tb_dosen {
+  nidn       String @id
+  id_user    Int    @unique
+  nama_dosen String
+
+  user     tb_user       @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+  presensi tb_presensi[]
+  evaluasi tb_evaluasi[]
+}
+
+model tb_mata_kuliah {
+  kode_mk String @id
+  nama_mk String
+  sks     Int
+}
+
+model tb_ruangan {
+  kode_ruangan String @id
+  nama_ruangan String
+}
+
+model tb_koordinat_kampus {
+  id_koordinat     Int    @id @default(autoincrement())
+  latitude_kampus  String
+  longitude_kampus String
+  radius_meter     Int
+}
+
+model tb_presensi {
+  id_presensi Int      @id @default(autoincrement())
+  nim         String
+  nidn        String
+  waktu_absen DateTime @default(now())
+  lat_mhs     String
+  long_mhs    String
+  status      String
+
+  mahasiswa tb_mahasiswa @relation(fields: [nim], references: [nim])
+  dosen     tb_dosen     @relation(fields: [nidn], references: [nidn])
+}
+
+model tb_kuesioner {
+  id_kuesioner Int    @id @default(autoincrement())
+  pertanyaan   String
+  status_aktif String
+
+  evaluasi tb_evaluasi[]
+}
+
+model tb_evaluasi {
+  id_hasil     Int    @id @default(autoincrement())
+  id_kuesioner Int
+  nim          String
+  nidn         String
+  skor_nilai   Int
+
+  kuesioner tb_kuesioner @relation(fields: [id_kuesioner], references: [id_kuesioner])
+  mahasiswa tb_mahasiswa @relation(fields: [nim], references: [nim])
+  dosen     tb_dosen     @relation(fields: [nidn], references: [nidn])
+}
