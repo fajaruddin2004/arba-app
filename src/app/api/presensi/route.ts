@@ -16,55 +16,67 @@ export async function POST(req: Request) {
 
     const decoded: any = jwt.verify(token, JWT_SECRET);
     
-    // Pastikan user adalah mahasiswa
     if (decoded.role !== "MAHASISWA") {
       return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
     }
 
-    const nim = decoded.username; // karena username diset sebagai NIM
+    const nim = decoded.username;
     
-    const { nidn, lat_mhs, long_mhs, status } = await req.json();
+    const { qr_token, lat_mhs, long_mhs, status } = await req.json();
 
-    if (!nidn || !lat_mhs || !long_mhs || !status) {
+    if (!qr_token || !lat_mhs || !long_mhs || !status) {
        return NextResponse.json({ message: "Data tidak lengkap" }, { status: 400 });
     }
 
-    // Cek apakah hari ini mahasiswa sudah absen untuk dosen ini
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    // Validate session via qr_token
+    const sesi = await prisma.tb_sesi_kelas.findUnique({
+      where: { qr_token }
+    });
 
+    if (!sesi) {
+      return NextResponse.json({ message: "QR Code tidak valid atau sesi tidak ditemukan" }, { status: 400 });
+    }
+
+    // Check if session is still active
+    if (sesi.status !== "AKTIF") {
+      return NextResponse.json({ message: "Sesi kelas sudah ditutup oleh dosen" }, { status: 400 });
+    }
+
+    // Auto-close check: if session > 20 minutes old
+    const sessionAge = Date.now() - new Date(sesi.waktu_buka).getTime();
+    if (sessionAge > 20 * 60 * 1000) {
+      await prisma.tb_sesi_kelas.update({
+        where: { id_sesi: sesi.id_sesi },
+        data: { status: "DITUTUP", waktu_tutup: new Date() }
+      });
+      return NextResponse.json({ message: "Sesi sudah berakhir (lebih dari 20 menit)" }, { status: 400 });
+    }
+
+    // Check if student already attended this session
     const existingPresensi = await prisma.tb_presensi.findFirst({
-      where: {
-        nim,
-        nidn,
-        waktu_absen: {
-          gte: startOfDay,
-          lte: endOfDay
-        }
-      }
+      where: { nim, id_sesi: sesi.id_sesi }
     });
 
     if (existingPresensi) {
-       return NextResponse.json({ message: "Anda sudah melakukan presensi untuk dosen ini hari ini" }, { status: 400 });
+       return NextResponse.json({ message: "Anda sudah absen untuk sesi ini" }, { status: 400 });
     }
 
-    // Insert ke tb_presensi
+    // Insert presensi linked to session
     const newPresensi = await prisma.tb_presensi.create({
       data: {
         nim,
-        nidn,
+        nidn: sesi.nidn,
+        id_sesi: sesi.id_sesi,
         lat_mhs: lat_mhs.toString(),
         long_mhs: long_mhs.toString(),
         status
       }
     });
 
-    return NextResponse.json({ message: "Presensi berhasil dicatat", data: newPresensi }, { status: 201 });
+    return NextResponse.json({ message: "Presensi berhasil dicatat!", data: newPresensi }, { status: 201 });
 
   } catch (error: any) {
+    console.error("Presensi error:", error);
     return NextResponse.json({ message: "Terjadi kesalahan", error: error.message }, { status: 500 });
   }
 }

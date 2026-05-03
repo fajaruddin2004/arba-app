@@ -64,3 +64,15 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ message: "Gagal menghapus", error: error.message }, { status: 500 });
   }
 }
+
+// Ambil semua mata kuliah
+export async function GET(req: Request) {
+  try {
+    const mk = await prisma.tb_mata_kuliah.findMany({
+      orderBy: { nama_mk: "asc" }
+    });
+    return NextResponse.json({ data: mk }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ message: "Gagal mengambil data", error: error.message }, { status: 500 });
+  }
+}

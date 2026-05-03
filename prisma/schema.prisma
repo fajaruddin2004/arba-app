@@ -48,9 +48,10 @@ model tb_dosen {
   id_user    Int    @unique
   nama_dosen String
 
-  user     tb_user       @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+  user     tb_user         @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
   presensi tb_presensi[]
   evaluasi tb_evaluasi[]
+  sesi     tb_sesi_kelas[]
 }
 
 model tb_mata_kuliah {
@@ -71,17 +72,32 @@ model tb_koordinat_kampus {
   radius_meter     Int
 }
 
+model tb_sesi_kelas {
+  id_sesi    Int       @id @default(autoincrement())
+  nidn       String
+  nama_mk    String
+  waktu_buka DateTime  @default(now())
+  waktu_tutup DateTime?
+  status     String    @default("AKTIF")
+  qr_token   String    @unique
+
+  dosen    tb_dosen      @relation(fields: [nidn], references: [nidn])
+  presensi tb_presensi[]
+}
+
 model tb_presensi {
   id_presensi Int      @id @default(autoincrement())
   nim         String
   nidn        String
+  id_sesi     Int?
   waktu_absen DateTime @default(now())
   lat_mhs     String
   long_mhs    String
   status      String
 
-  mahasiswa tb_mahasiswa @relation(fields: [nim], references: [nim])
-  dosen     tb_dosen     @relation(fields: [nidn], references: [nidn])
+  mahasiswa tb_mahasiswa   @relation(fields: [nim], references: [nim])
+  dosen     tb_dosen       @relation(fields: [nidn], references: [nidn])
+  sesi      tb_sesi_kelas? @relation(fields: [id_sesi], references: [id_sesi])
 }
 
 model tb_kuesioner {

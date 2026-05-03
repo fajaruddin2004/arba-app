@@ -155,7 +155,7 @@ export default function MahasiswaDashboard() {
     
     try {
       const qrData = JSON.parse(text);
-      if (!qrData.nidn) throw new Error("Format QR Code tidak valid");
+      if (!qrData.qr_token) throw new Error("Format QR Code tidak valid atau bukan QR sesi aktif.");
 
       const coords = (window as any).mhsCoords || { lat: 0, lng: 0, status: "Unknown" };
 
@@ -163,7 +163,7 @@ export default function MahasiswaDashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nidn: qrData.nidn,
+          qr_token: qrData.qr_token,
           lat_mhs: coords.lat,
           long_mhs: coords.lng,
           status: coords.status
