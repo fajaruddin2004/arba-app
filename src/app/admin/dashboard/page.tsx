@@ -5,21 +5,24 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Home, Users, BookOpen, FileText, LogOut, Plus, Trash2, GraduationCap, Activity, TrendingUp, ChevronRight, X, Download } from "lucide-react";
 
-const TiltCard = ({ children, className }: { children: React.ReactNode; className?: string }) => {
+const TiltCard = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => {
+  const [isMobile, setIsMobile] = useState(false);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const mx = useSpring(x);
   const my = useSpring(y);
   const rx = useTransform(my, [-0.5, 0.5], ["8deg", "-8deg"]);
   const ry = useTransform(mx, [-0.5, 0.5], ["-8deg", "8deg"]);
+  useEffect(() => { setIsMobile(window.matchMedia("(pointer: coarse)").matches); }, []);
   return (
     <motion.div
-      onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); x.set((e.clientX - r.left) / r.width - 0.5); y.set((e.clientY - r.top) / r.height - 0.5); }}
+      onMouseMove={(e) => { if (isMobile) return; const r = e.currentTarget.getBoundingClientRect(); x.set((e.clientX - r.left) / r.width - 0.5); y.set((e.clientY - r.top) / r.height - 0.5); }}
       onMouseLeave={() => { x.set(0); y.set(0); }}
-      style={{ rotateY: ry, rotateX: rx, transformStyle: "preserve-3d" }}
-      className={`glass-card p-6 lg:p-8 rounded-3xl ${className}`}
+      onClick={onClick}
+      style={isMobile ? {} : { rotateY: ry, rotateX: rx, transformStyle: "preserve-3d" }}
+      className={`glass-card p-5 md:p-6 lg:p-8 rounded-3xl ${onClick ? "cursor-pointer active:scale-[0.98] transition-transform" : ""} ${className}`}
     >
-      <div style={{ transform: "translateZ(25px)", transformStyle: "preserve-3d" }} className="h-full">{children}</div>
+      <div style={isMobile ? {} : { transform: "translateZ(25px)", transformStyle: "preserve-3d" }} className="h-full">{children}</div>
     </motion.div>
   );
 };
@@ -85,16 +88,16 @@ export default function AdminDashboard() {
             <p className="text-[10px] text-stone-500 uppercase tracking-widest font-bold">STIKOM 22 Januari</p>
           </div>
         </div>
-        <nav className="flex-1 flex flex-row md:flex-col gap-2 md:gap-3 overflow-x-auto hide-scrollbar md:px-2">
+        <nav className="flex-1 flex flex-row md:flex-col gap-1 md:gap-3 overflow-x-auto hide-scrollbar md:px-2">
           {tabs.map((t, i) => (
             <button key={i} onClick={() => setActiveTab(t.label)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all whitespace-nowrap ${activeTab === t.label ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 text-amber-400 border border-amber-500/30" : "text-zinc-400 hover:text-white hover:bg-white/5"}`}>
+              className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-3 rounded-2xl transition-all whitespace-nowrap min-h-[48px] min-w-[48px] justify-center md:justify-start shrink-0 ${activeTab === t.label ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 text-amber-400 border border-amber-500/30" : "text-zinc-400 hover:text-white hover:bg-white/5"}`}>
               <t.icon size={20} />
               <span className="hidden md:block font-medium text-sm">{t.label}</span>
             </button>
           ))}
         </nav>
-        <button onClick={handleLogout} className="shrink-0 ml-auto md:ml-0 flex items-center gap-3 px-4 py-3 rounded-2xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all md:mt-auto">
+        <button onClick={handleLogout} className="shrink-0 ml-auto md:ml-0 flex items-center gap-3 px-3 md:px-4 py-3 rounded-2xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all md:mt-auto min-h-[48px]">
           <LogOut size={20} /><span className="hidden md:block font-medium text-sm">Keluar</span>
         </button>
       </aside>

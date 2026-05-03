@@ -23,10 +23,13 @@ import QRScanner from "@/components/QRScanner";
 const TiltCard = ({
   children,
   className,
+  onClick,
 }: {
   children: React.ReactNode;
   className?: string;
+  onClick?: () => void;
 }) => {
+  const [isMobile, setIsMobile] = useState(false);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -36,42 +39,33 @@ const TiltCard = ({
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
 
+  useEffect(() => {
+    setIsMobile(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (isMobile) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const xPct = mouseX / width - 0.5;
-    const yPct = mouseY / height - 0.5;
-    x.set(xPct);
-    y.set(yPct);
+    x.set((e.clientX - rect.left) / rect.width - 0.5);
+    y.set((e.clientY - rect.top) / rect.height - 0.5);
   };
 
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
+  const handleMouseLeave = () => { x.set(0); y.set(0); };
 
   return (
     <motion.div
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{
-        rotateX,
-        rotateY,
-        transformStyle: "preserve-3d",
-      }}
-      className={`glass-panel rounded-3xl p-6 relative group transition-all duration-300 ${className}`}
+      onClick={onClick}
+      style={isMobile ? {} : { rotateX, rotateY, transformStyle: "preserve-3d" }}
+      className={`glass-panel rounded-3xl p-5 md:p-6 relative group transition-all duration-300 ${onClick ? "cursor-pointer active:scale-[0.98]" : ""} ${className}`}
     >
       <div
-        style={{ transform: "translateZ(30px)" }}
+        style={isMobile ? {} : { transform: "translateZ(30px)" }}
         className="w-full h-full relative z-10"
       >
         {children}
       </div>
-      
-      {/* Glow effect on hover */}
       <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-br from-amber-500/10 to-orange-500/10" />
     </motion.div>
   );
@@ -225,7 +219,7 @@ export default function MahasiswaDashboard() {
           </div>
         </div>
 
-        <nav className="flex-1 flex flex-row lg:flex-col gap-2 lg:gap-4 lg:px-6 overflow-x-auto hide-scrollbar">
+        <nav className="flex-1 flex flex-row lg:flex-col gap-1 md:gap-2 lg:gap-4 lg:px-6 overflow-x-auto hide-scrollbar">
 
           {[
             { icon: Home, label: "Dashboard" },
@@ -240,14 +234,14 @@ export default function MahasiswaDashboard() {
                 setActiveTab(item.label);
                 if (item.label === "Absensi QR") setShowScanner(true);
               }}
-              className={`flex items-center gap-4 px-4 py-4 rounded-full transition-all duration-300 ${
+              className={`flex items-center gap-3 md:gap-4 px-3 md:px-4 py-3 md:py-4 rounded-2xl md:rounded-full transition-all duration-300 min-h-[48px] min-w-[48px] justify-center lg:justify-start shrink-0 ${
                 activeTab === item.label
                   ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 text-amber-400 border border-amber-500/30 glow-amber"
                   : "text-zinc-400 hover:text-white hover:bg-white/5"
               }`}
             >
               <item.icon size={22} className={activeTab === item.label ? "text-amber-400" : ""} />
-              <span className="hidden lg:block font-medium">{item.label}</span>
+              <span className="hidden lg:block font-medium text-sm">{item.label}</span>
               {activeTab === item.label && (
                 <motion.div layoutId="active-nav" className="hidden lg:block ml-auto">
                   <div className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_10px_#fbbf24]" />
@@ -328,39 +322,40 @@ export default function MahasiswaDashboard() {
 
               {/* Scan Absensi Card - Main Action */}
               <TiltCard 
-                className="md:col-span-2 group cursor-pointer border border-amber-500/20 hover:border-amber-500/50 bg-gradient-to-br from-amber-500/10 to-transparent"
+                className="md:col-span-2 group border border-amber-500/20 hover:border-amber-500/50 bg-gradient-to-br from-amber-500/10 to-transparent"
+                onClick={() => setShowScanner(true)}
               >
-                <div onClick={() => setShowScanner(true)} className="flex justify-between items-center h-full">
-                  <div className="space-y-4">
-                    <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 glow-amber">
-                      <ScanLine size={32} />
+                <div className="flex justify-between items-center h-full">
+                  <div className="space-y-3 md:space-y-4">
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 glow-amber">
+                      <ScanLine size={28} />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">Scan Absensi Baru</h3>
-                      <p className="text-zinc-400 max-w-sm">
+                      <h3 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">Scan Absensi Baru</h3>
+                      <p className="text-zinc-400 max-w-sm text-sm md:text-base">
                         Lakukan scan QR Code pada layar dosen untuk mencatat kehadiran.
                       </p>
                     </div>
                   </div>
-                  <div className="w-16 h-16 rounded-full bg-amber-500 flex items-center justify-center text-espresso transform group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(245,158,11,0.6)]">
-                    <ChevronRight size={32} />
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-amber-500 flex items-center justify-center text-espresso transform group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(245,158,11,0.6)] shrink-0 ml-4">
+                    <ChevronRight size={28} />
                   </div>
                 </div>
               </TiltCard>
 
               {/* Evaluasi Dosen Card */}
-              <TiltCard className="cursor-pointer group border border-orange-500/20 hover:border-orange-500/50 bg-gradient-to-bl from-orange-500/10 to-transparent">
-                <div onClick={() => setActiveTab("Evaluasi")} className="flex flex-col h-full justify-between">
+              <TiltCard className="group border border-orange-500/20 hover:border-orange-500/50 bg-gradient-to-bl from-orange-500/10 to-transparent" onClick={() => setActiveTab("Evaluasi")}>
+                <div className="flex flex-col h-full justify-between">
                   <div>
-                    <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-400 mb-4 glow-orange">
+                    <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-400 mb-3 md:mb-4 glow-orange">
                       <ClipboardList size={28} />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">Evaluasi Dosen</h3>
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Evaluasi Dosen</h3>
                     <p className="text-sm text-zinc-400">
                       Isi kuesioner kinerja dosen untuk semester ini.
                     </p>
                   </div>
-                  <div className="mt-6 flex items-center gap-2 text-orange-400 font-medium group-hover:translate-x-2 transition-transform">
+                  <div className="mt-4 md:mt-6 flex items-center gap-2 text-orange-400 font-medium group-hover:translate-x-2 transition-transform">
                     Mulai Evaluasi <ChevronRight size={18} />
                   </div>
                 </div>
@@ -468,7 +463,7 @@ export default function MahasiswaDashboard() {
           <div className="bg-[#0a0502] border border-amber-500/30 rounded-3xl p-6 w-full max-w-md relative shadow-[0_0_50px_rgba(245,158,11,0.2)]">
             <button 
               onClick={() => setShowScanner(false)}
-              className="absolute top-4 right-4 text-stone-500 hover:text-white"
+              className="absolute top-3 right-3 w-10 h-10 flex items-center justify-center rounded-full bg-stone-800 text-stone-300 hover:text-white hover:bg-stone-700 active:scale-95 transition-all z-10"
             >
               <XCircle size={24} />
             </button>

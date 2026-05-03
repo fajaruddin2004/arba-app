@@ -9,10 +9,13 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 const TiltCard = ({
   children,
   className,
+  onClick,
 }: {
   children: React.ReactNode;
   className?: string;
+  onClick?: () => void;
 }) => {
+  const [isMobile, setIsMobile] = useState(false);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -22,35 +25,28 @@ const TiltCard = ({
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
 
+  useEffect(() => {
+    setIsMobile(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (isMobile) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const xPct = mouseX / width - 0.5;
-    const yPct = mouseY / height - 0.5;
-    x.set(xPct);
-    y.set(yPct);
+    x.set((e.clientX - rect.left) / rect.width - 0.5);
+    y.set((e.clientY - rect.top) / rect.height - 0.5);
   };
 
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
+  const handleMouseLeave = () => { x.set(0); y.set(0); };
 
   return (
     <motion.div
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{
-        rotateY,
-        rotateX,
-        transformStyle: "preserve-3d",
-      }}
-      className={`glass-card p-6 lg:p-8 rounded-3xl ${className}`}
+      onClick={onClick}
+      style={isMobile ? {} : { rotateY, rotateX, transformStyle: "preserve-3d" }}
+      className={`glass-card p-5 md:p-6 lg:p-8 rounded-3xl ${onClick ? "cursor-pointer active:scale-[0.98] transition-transform" : ""} ${className}`}
     >
-      <div style={{ transform: "translateZ(30px)", transformStyle: "preserve-3d" }} className="h-full">
+      <div style={isMobile ? {} : { transform: "translateZ(30px)", transformStyle: "preserve-3d" }} className="h-full">
         {children}
       </div>
     </motion.div>
@@ -132,7 +128,7 @@ export default function DosenDashboard() {
           </div>
         </div>
         
-        <nav className="flex-1 flex flex-row lg:flex-col gap-2 lg:gap-4 lg:px-6 overflow-x-auto hide-scrollbar">
+        <nav className="flex-1 flex flex-row lg:flex-col gap-1 md:gap-2 lg:gap-4 lg:px-6 overflow-x-auto hide-scrollbar">
           {[
             { icon: Home, label: "Dashboard" },
             { icon: QrCode, label: "Buka Sesi Kelas" },
@@ -146,14 +142,14 @@ export default function DosenDashboard() {
                 setActiveTab(item.label);
                 if (item.label === "Buka Sesi Kelas") setShowQR(true);
               }}
-              className={`flex items-center gap-4 px-4 py-4 rounded-full transition-all duration-300 ${
+              className={`flex items-center gap-3 md:gap-4 px-3 md:px-4 py-3 md:py-4 rounded-2xl md:rounded-full transition-all duration-300 min-h-[48px] min-w-[48px] justify-center md:justify-start shrink-0 ${
                 activeTab === item.label
                   ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-400 border border-orange-500/30 glow-orange"
                   : "text-zinc-400 hover:text-white hover:bg-white/5"
               }`}
             >
               <item.icon size={22} className={activeTab === item.label ? "text-orange-400" : ""} />
-              <span className="hidden lg:block font-medium">{item.label}</span>
+              <span className="hidden lg:block font-medium text-sm">{item.label}</span>
               {activeTab === item.label && (
                 <motion.div layoutId="active-nav-dosen" className="hidden lg:block ml-auto">
                   <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_10px_#f97316]" />
@@ -230,38 +226,39 @@ export default function DosenDashboard() {
               </TiltCard>
 
               <TiltCard 
-                className="md:col-span-2 group cursor-pointer border border-orange-500/20 hover:border-orange-500/50 bg-gradient-to-br from-orange-500/10 to-transparent"
+                className="md:col-span-2 group border border-orange-500/20 hover:border-orange-500/50 bg-gradient-to-br from-orange-500/10 to-transparent"
+                onClick={() => { setActiveTab("Buka Sesi Kelas"); setShowQR(true); }}
               >
-                <div onClick={() => setActiveTab("Buka Sesi Kelas")} className="flex justify-between items-center h-full">
-                  <div className="space-y-4">
-                    <div className="w-14 h-14 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-400 glow-orange">
-                      <QrCode size={32} />
+                <div className="flex justify-between items-center h-full">
+                  <div className="space-y-3 md:space-y-4">
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-400 glow-orange">
+                      <QrCode size={28} />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">Buka Sesi Absensi Baru</h3>
-                      <p className="text-zinc-400 max-w-sm">
+                      <h3 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">Buka Sesi Absensi Baru</h3>
+                      <p className="text-zinc-400 max-w-sm text-sm md:text-base">
                         Generate QR Code dinamis untuk ditampilkan di proyektor agar discan mahasiswa.
                       </p>
                     </div>
                   </div>
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-black transform group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(249,115,22,0.6)]">
-                    <ChevronRight size={32} />
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-black transform group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(249,115,22,0.6)] shrink-0 ml-4">
+                    <ChevronRight size={28} />
                   </div>
                 </div>
               </TiltCard>
 
-              <TiltCard className="cursor-pointer group border border-amber-500/20 hover:border-amber-500/50 bg-gradient-to-bl from-amber-500/10 to-transparent">
-                <div onClick={() => setActiveTab("Hasil Evaluasi")} className="flex flex-col h-full justify-between">
+              <TiltCard className="group border border-amber-500/20 hover:border-amber-500/50 bg-gradient-to-bl from-amber-500/10 to-transparent" onClick={() => setActiveTab("Hasil Evaluasi")}>
+                <div className="flex flex-col h-full justify-between">
                   <div>
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 mb-4 glow-amber">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 mb-3 md:mb-4 glow-amber">
                       <BookOpen size={28} />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">Lihat Hasil Evaluasi</h3>
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Lihat Hasil Evaluasi</h3>
                     <p className="text-sm text-zinc-400">
                       Cek penilaian kinerja Anda dari mahasiswa.
                     </p>
                   </div>
-                  <div className="mt-6 flex items-center gap-2 text-amber-400 font-medium group-hover:translate-x-2 transition-transform">
+                  <div className="mt-4 md:mt-6 flex items-center gap-2 text-amber-400 font-medium group-hover:translate-x-2 transition-transform">
                     Buka Laporan <ChevronRight size={18} />
                   </div>
                 </div>
@@ -279,11 +276,18 @@ export default function DosenDashboard() {
                   <p className="text-sm text-stone-400 mb-8 relative z-10">Tampilkan QR Code ini di layar kelas Anda. Kode ini berlaku selama sesi ini.</p>
                   
                   <button 
-                    onClick={() => setShowQR(!showQR)}
-                    className={`w-full relative group overflow-hidden px-8 py-5 rounded-2xl font-black text-lg transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(249,115,22,0.3)] ${showQR ? 'bg-red-500/10 text-red-500 border border-red-500/50' : 'bg-gradient-to-r from-orange-500 to-amber-500 text-black'}`}
+                    onClick={() => {
+                      if (showQR) {
+                        setShowQR(false);
+                        setActiveTab("Dashboard");
+                      } else {
+                        setShowQR(true);
+                      }
+                    }}
+                    className={`w-full relative group overflow-hidden px-6 md:px-8 py-5 rounded-2xl font-black text-base md:text-lg transition-all active:scale-[0.97] hover:scale-[1.02] shadow-[0_0_30px_rgba(249,115,22,0.3)] min-h-[56px] ${showQR ? 'bg-red-500/10 text-red-500 border-2 border-red-500/50' : 'bg-gradient-to-r from-orange-500 to-amber-500 text-black'}`}
                   >
                     <span className="relative flex items-center justify-center gap-3">
-                      {showQR ? "Tutup Sesi Kuliah" : "Generate Barcode Baru"} <ChevronRight className={showQR ? "rotate-90 transition-transform" : "transition-transform"} />
+                      {showQR ? "✕ Tutup Sesi Kuliah" : "Generate Barcode Baru"} <ChevronRight className={showQR ? "rotate-90 transition-transform" : "transition-transform"} />
                     </span>
                   </button>
                   
