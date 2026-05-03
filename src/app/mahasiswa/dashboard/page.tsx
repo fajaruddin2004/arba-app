@@ -263,8 +263,15 @@ export default function MahasiswaDashboard() {
             <button
               key={i}
               onClick={() => {
-                setActiveTab(item.label);
-                if (item.label === "Absensi QR") setShowScanner(true);
+                if (item.label === "Absensi QR") {
+                  if (geoStatus.includes("Luar") || geoStatus.includes("Mati")) {
+                    alert("Akses ditolak! Anda berada di luar radius aman kampus (50m) atau GPS tidak aktif.");
+                    return;
+                  }
+                  setShowScanner(true);
+                } else {
+                  setActiveTab(item.label);
+                }
               }}
               className={`flex items-center gap-3 md:gap-4 px-3 md:px-4 py-3 md:py-4 rounded-2xl md:rounded-full transition-all duration-300 min-h-[48px] min-w-[48px] justify-center lg:justify-start shrink-0 ${
                 activeTab === item.label
