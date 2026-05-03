@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 
+export const dynamic = "force-dynamic";
+
 const JWT_SECRET = process.env.JWT_SECRET || "rahasia-stikom-22j";
 
 // Helper: get user from token

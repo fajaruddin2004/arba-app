@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   const [msg, setMsg] = useState("");
 
   const fetchData = () => {
-    fetch("/api/admin/stats").then(r => r.json()).then(d => { if (d.mhsCount !== undefined) setData(d); });
+    fetch(`/api/admin/stats?t=${Date.now()}`).then(r => r.json()).then(d => { if (d.mhsCount !== undefined) setData(d); });
   };
   useEffect(() => { fetchData(); }, []);
 

@@ -66,7 +66,7 @@ export default function DosenDashboard() {
   const [isCreatingSession, setIsCreatingSession] = useState(false);
 
   const fetchUserData = () => {
-    fetch("/api/auth/me")
+    fetch(`/api/auth/me?t=${Date.now()}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.user) setUserData(data.user);
@@ -79,7 +79,7 @@ export default function DosenDashboard() {
   };
 
   const fetchMataKuliah = () => {
-    fetch("/api/admin/matakuliah")
+    fetch(`/api/admin/matakuliah?t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if (data.data) setMataKuliahList(data.data);
@@ -88,7 +88,7 @@ export default function DosenDashboard() {
 
   const fetchActiveSession = () => {
     if (!userData?.dosen?.nidn) return;
-    fetch(`/api/sesi?nidn=${userData.dosen.nidn}`)
+    fetch(`/api/sesi?nidn=${userData.dosen.nidn}&t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         setActiveSession(data.sesi || null);

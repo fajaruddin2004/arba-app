@@ -85,7 +85,7 @@ export default function MahasiswaDashboard() {
     window.addEventListener("mousemove", handleMouseMove);
     
     // Fetch user data
-    fetch("/api/auth/me")
+    fetch(`/api/auth/me?t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if(data.user) setUserData(data.user);
