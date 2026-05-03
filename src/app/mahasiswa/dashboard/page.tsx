@@ -348,8 +348,8 @@ export default function MahasiswaDashboard() {
                 <Clock size={40} className="text-amber-500 mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
                 <h4 className="text-lg font-medium text-zinc-300">Mata Kuliah Tersedia</h4>
                 <p className="text-2xl font-bold text-white mt-2">{mataKuliah.length > 0 ? (mataKuliah[0] as any).nama_mk : "Belum Ada"}</p>
-                <p className="text-orange-400 mt-1 font-medium">{mataKuliah.length > 0 ? `${(mataKuliah[0] as any).sks} SKS` : "-"}</p>
-                <p className="text-sm text-zinc-500 mt-1">{mataKuliah.length > 0 ? ((mataKuliah[0] as any).dosen?.nama_dosen || "Dosen Belum Ditentukan") : "-"}</p>
+                <p className="text-orange-400 mt-1 font-medium">{mataKuliah.length > 0 && (mataKuliah[0] as any).hari ? `${(mataKuliah[0] as any).hari}, ${(mataKuliah[0] as any).waktu}` : "-"}</p>
+                <p className="text-sm text-zinc-500 mt-1">{mataKuliah.length > 0 ? ((mataKuliah[0] as any).ruangan || "Ruangan Belum Ditentukan") : "-"}</p>
               </TiltCard>
 
               {/* Scan Absensi Card - Main Action */}
@@ -447,11 +447,12 @@ export default function MahasiswaDashboard() {
                    <div key={i} className="p-6 rounded-2xl bg-white/5 border-l-4 border-l-amber-500 flex justify-between items-center hover:bg-white/10 transition-colors">
                       <div>
                         <h4 className="font-bold text-xl text-white">{mk.nama_mk}</h4>
-                        <p className="text-stone-400 font-mono mt-1 text-sm">{mk.kode_mk}</p>
+                        <p className="text-stone-400 font-mono mt-1 text-sm">{mk.kode_mk} • {mk.sks} SKS</p>
+                        <p className="text-sm text-stone-500 mt-1">{mk.dosen?.nama_dosen || "Belum ada Dosen"}</p>
                       </div>
                       <div className="text-right">
-                         <p className="font-bold text-amber-500">{mk.dosen?.nama_dosen || "Belum ada Dosen"}</p>
-                         <p className="text-sm text-stone-400 mt-1">{mk.sks} SKS</p>
+                         <p className="font-bold text-amber-500">{mk.hari ? `${mk.hari}, ${mk.waktu}` : "Jadwal Belum Ada"}</p>
+                         <p className="text-sm text-stone-400 mt-1">{mk.ruangan || "Ruangan Belum Ada"}</p>
                       </div>
                    </div>
                  )) : (

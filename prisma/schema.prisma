@@ -61,6 +61,9 @@ model tb_mata_kuliah {
   nama_mk String
   sks     Int
   nidn    String?
+  hari    String?
+  waktu   String?
+  ruangan String?
   dosen   tb_dosen? @relation(fields: [nidn], references: [nidn])
 }
 

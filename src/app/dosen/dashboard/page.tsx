@@ -69,7 +69,10 @@ export default function DosenDashboard() {
     fetch(`/api/auth/me?t=${Date.now()}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.user) setUserData(data.user);
+        if (data.user) {
+          setUserData(data.user);
+          if (data.user.dosen?.nidn) fetchMataKuliah(data.user.dosen.nidn);
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -78,8 +81,8 @@ export default function DosenDashboard() {
       });
   };
 
-  const fetchMataKuliah = () => {
-    fetch(`/api/admin/matakuliah?t=${Date.now()}`)
+  const fetchMataKuliah = (nidn: string) => {
+    fetch(`/api/admin/matakuliah?nidn=${nidn}&t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if (data.data) setMataKuliahList(data.data);
@@ -97,7 +100,6 @@ export default function DosenDashboard() {
 
   useEffect(() => {
     fetchUserData();
-    fetchMataKuliah();
   }, []);
 
   useEffect(() => {

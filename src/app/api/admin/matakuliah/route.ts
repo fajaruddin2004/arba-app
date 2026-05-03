@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
     }
 
-    const { kode_mk, nama_mk, sks, nidn } = await req.json();
+    const { kode_mk, nama_mk, sks, nidn, hari, waktu, ruangan } = await req.json();
 
     if (!kode_mk || !nama_mk || !sks) {
       return NextResponse.json({ message: "Semua field wajib diisi (Kode, Nama, SKS)" }, { status: 400 });
@@ -35,7 +35,10 @@ export async function POST(req: Request) {
         kode_mk, 
         nama_mk, 
         sks: parseInt(sks),
-        nidn: nidn || null
+        nidn: nidn || null,
+        hari: hari || null,
+        waktu: waktu || null,
+        ruangan: ruangan || null
       }
     });
 
@@ -75,7 +78,11 @@ export async function DELETE(req: Request) {
 // Ambil semua mata kuliah
 export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const nidn = searchParams.get("nidn");
+
     const mk = await prisma.tb_mata_kuliah.findMany({
+      where: nidn ? { nidn } : {},
       include: { dosen: true },
       orderBy: { nama_mk: "asc" }
     });

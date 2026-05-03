@@ -33,7 +33,7 @@ export default function AdminDashboard() {
   const [data, setData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [showAddMK, setShowAddMK] = useState(false);
-  const [mkForm, setMkForm] = useState({ kode_mk: "", nama_mk: "", sks: "", nidn: "" });
+  const [mkForm, setMkForm] = useState({ kode_mk: "", nama_mk: "", sks: "", nidn: "", hari: "", waktu: "", ruangan: "" });
   const [msg, setMsg] = useState("");
 
   const fetchData = () => {
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
     setMsg("");
     const res = await fetch("/api/admin/matakuliah", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(mkForm) });
     const d = await res.json();
-    if (res.ok) { setMsg("Berhasil!"); setMkForm({ kode_mk: "", nama_mk: "", sks: "", nidn: "" }); setShowAddMK(false); fetchData(); }
+    if (res.ok) { setMsg("Berhasil!"); setMkForm({ kode_mk: "", nama_mk: "", sks: "", nidn: "", hari: "", waktu: "", ruangan: "" }); setShowAddMK(false); fetchData(); }
     else setMsg(d.message);
   };
 
@@ -269,16 +269,27 @@ export default function AdminDashboard() {
                     <button onClick={() => setShowAddMK(false)} className="text-zinc-400 hover:text-white"><X size={20} /></button>
                   </div>
                   {msg && <p className="text-sm text-amber-400 mb-3">{msg}</p>}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <input value={mkForm.kode_mk} onChange={e => setMkForm({ ...mkForm, kode_mk: e.target.value })} placeholder="Kode MK (cth: IF101)" className="bg-black/50 border border-white/10 rounded-xl p-3 text-white focus:border-amber-500 focus:outline-none" />
                     <input value={mkForm.nama_mk} onChange={e => setMkForm({ ...mkForm, nama_mk: e.target.value })} placeholder="Nama Mata Kuliah" className="bg-black/50 border border-white/10 rounded-xl p-3 text-white focus:border-amber-500 focus:outline-none" />
                     <input value={mkForm.sks} onChange={e => setMkForm({ ...mkForm, sks: e.target.value })} placeholder="SKS" type="number" className="bg-black/50 border border-white/10 rounded-xl p-3 text-white focus:border-amber-500 focus:outline-none" />
+                    
                     <select value={mkForm.nidn} onChange={e => setMkForm({ ...mkForm, nidn: e.target.value })} className="bg-black/50 border border-white/10 rounded-xl p-3 text-zinc-400 focus:border-amber-500 focus:outline-none">
-                      <option value="">Pilih Dosen (Opsional)</option>
+                      <option value="">Pilih Dosen Pengampu (Opsional)</option>
                       {(data.dosen || []).map((d: any) => (
                         <option key={d.nidn} value={d.nidn}>{d.nama_dosen}</option>
                       ))}
                     </select>
+
+                    <select value={mkForm.hari} onChange={e => setMkForm({ ...mkForm, hari: e.target.value })} className="bg-black/50 border border-white/10 rounded-xl p-3 text-zinc-400 focus:border-amber-500 focus:outline-none">
+                      <option value="">Pilih Hari (Opsional)</option>
+                      {["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"].map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+
+                    <input value={mkForm.waktu} onChange={e => setMkForm({ ...mkForm, waktu: e.target.value })} placeholder="Waktu (cth: 10:00 - 12:30)" className="bg-black/50 border border-white/10 rounded-xl p-3 text-white focus:border-amber-500 focus:outline-none" />
+                    <input value={mkForm.ruangan} onChange={e => setMkForm({ ...mkForm, ruangan: e.target.value })} placeholder="Ruangan (cth: Lab Komputer 1)" className="bg-black/50 border border-white/10 rounded-xl p-3 text-white focus:border-amber-500 focus:outline-none" />
                   </div>
                   <button onClick={addMK} className="mt-4 px-6 py-3 rounded-xl bg-amber-500 text-black font-bold hover:bg-amber-400 transition-colors">Simpan</button>
                 </TiltCard>
@@ -288,7 +299,7 @@ export default function AdminDashboard() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="text-left text-zinc-500 border-b border-white/5">
-                      <th className="pb-3 font-medium">Kode</th><th className="pb-3 font-medium">Nama MK</th><th className="pb-3 font-medium">SKS</th><th className="pb-3 font-medium">Dosen Pengampu</th><th className="pb-3 font-medium">Aksi</th>
+                      <th className="pb-3 font-medium">Kode</th><th className="pb-3 font-medium">Nama MK</th><th className="pb-3 font-medium">SKS</th><th className="pb-3 font-medium">Dosen</th><th className="pb-3 font-medium">Jadwal & Ruang</th><th className="pb-3 font-medium">Aksi</th>
                     </tr></thead>
                     <tbody>
                       {(data.mataKuliah || []).map((mk: any, i: number) => (
@@ -297,6 +308,9 @@ export default function AdminDashboard() {
                           <td className="py-4 font-medium">{mk.nama_mk}</td>
                           <td className="py-4 text-zinc-400">{mk.sks} SKS</td>
                           <td className="py-4 text-zinc-400">{mk.dosen?.nama_dosen || <span className="text-zinc-600 italic">Belum ditentukan</span>}</td>
+                          <td className="py-4 text-zinc-400 text-xs">
+                            {mk.hari ? `${mk.hari}, ${mk.waktu} (${mk.ruangan})` : <span className="text-zinc-600 italic">-</span>}
+                          </td>
                           <td className="py-4">
                             <button onClick={() => deleteMK(mk.kode_mk)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-lg transition-colors"><Trash2 size={16} /></button>
                           </td>
