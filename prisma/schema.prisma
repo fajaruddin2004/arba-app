@@ -34,6 +34,7 @@ model tb_mahasiswa {
   nama_mahasiswa  String
   id_jurusan      Int?
   id_semester     Int?
+  ipk             Float?      @default(0)
 
   user     tb_user      @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
   jurusan  tb_jurusan?  @relation(fields: [id_jurusan], references: [id_jurusan])
@@ -52,12 +53,15 @@ model tb_dosen {
   presensi tb_presensi[]
   evaluasi tb_evaluasi[]
   sesi     tb_sesi_kelas[]
+  matkul   tb_mata_kuliah[]
 }
 
 model tb_mata_kuliah {
   kode_mk String @id
   nama_mk String
   sks     Int
+  nidn    String?
+  dosen   tb_dosen? @relation(fields: [nidn], references: [nidn])
 }
 
 model tb_ruangan {

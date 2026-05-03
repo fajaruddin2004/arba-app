@@ -19,10 +19,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
     }
 
-    const { kode_mk, nama_mk, sks } = await req.json();
+    const { kode_mk, nama_mk, sks, nidn } = await req.json();
 
     if (!kode_mk || !nama_mk || !sks) {
-      return NextResponse.json({ message: "Semua field wajib diisi" }, { status: 400 });
+      return NextResponse.json({ message: "Semua field wajib diisi (Kode, Nama, SKS)" }, { status: 400 });
     }
 
     const existing = await prisma.tb_mata_kuliah.findUnique({ where: { kode_mk } });
@@ -31,7 +31,12 @@ export async function POST(req: Request) {
     }
 
     const mk = await prisma.tb_mata_kuliah.create({
-      data: { kode_mk, nama_mk, sks: parseInt(sks) }
+      data: { 
+        kode_mk, 
+        nama_mk, 
+        sks: parseInt(sks),
+        nidn: nidn || null
+      }
     });
 
     return NextResponse.json({ message: "Mata Kuliah berhasil ditambahkan", data: mk }, { status: 201 });
@@ -71,6 +76,7 @@ export async function DELETE(req: Request) {
 export async function GET(req: Request) {
   try {
     const mk = await prisma.tb_mata_kuliah.findMany({
+      include: { dosen: true },
       orderBy: { nama_mk: "asc" }
     });
     return NextResponse.json({ data: mk }, { status: 200 });

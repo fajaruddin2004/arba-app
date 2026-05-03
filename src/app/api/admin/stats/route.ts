@@ -78,6 +78,7 @@ export async function GET(req: Request) {
 
     // Daftar mata kuliah
     const mataKuliah = await prisma.tb_mata_kuliah.findMany({
+      include: { dosen: true },
       orderBy: { nama_mk: "asc" }
     });
 

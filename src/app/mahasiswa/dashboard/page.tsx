@@ -79,6 +79,8 @@ export default function MahasiswaDashboard() {
   const [scanResult, setScanResult] = useState("");
   const [geoStatus, setGeoStatus] = useState("Mengecek...");
   const [activeTab, setActiveTab] = useState("Dashboard");
+  const [mataKuliah, setMataKuliah] = useState([]);
+  const [ipkForm, setIpkForm] = useState("");
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => setMousePosition({ x: e.clientX, y: e.clientY });
@@ -88,12 +90,22 @@ export default function MahasiswaDashboard() {
     fetch(`/api/auth/me?t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
-        if(data.user) setUserData(data.user);
+        if(data.user) {
+          setUserData(data.user);
+          if (data.user.mahasiswa?.ipk) setIpkForm(data.user.mahasiswa.ipk.toString());
+        }
         setLoading(false);
       })
       .catch(err => {
         console.error(err);
         setLoading(false);
+      });
+
+    // Fetch Mata Kuliah for Jadwal
+    fetch(`/api/admin/matakuliah?t=${Date.now()}`)
+      .then(res => res.json())
+      .then(data => {
+        if(data.data) setMataKuliah(data.data);
       });
 
     // Check Geolocation
@@ -107,8 +119,8 @@ export default function MahasiswaDashboard() {
           const kampusLat = -3.9987867;
           const kampusLng = 122.5177898;
           
-          // Radius toleransi dalam meter (misal: 100 meter dari titik tengah kampus)
-          const radiusMaksimal = 100;
+          // Radius toleransi dalam meter (misal: 50 meter dari titik tengah kampus)
+          const radiusMaksimal = 50;
 
           // Rumus Haversine untuk menghitung jarak antara 2 titik GPS di bumi
           const R = 6371e3; // Radius bumi dalam meter
@@ -177,6 +189,26 @@ export default function MahasiswaDashboard() {
       window.location.reload(); // Refresh to get updated history
     } catch (err: any) {
       alert("Gagal scan: " + err.message);
+    }
+  };
+
+  const handleUpdateIpk = async () => {
+    if (!ipkForm || isNaN(parseFloat(ipkForm))) return alert("Masukkan IPK yang valid");
+    try {
+      const res = await fetch("/api/mahasiswa/profil", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ipk: ipkForm })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("IPK berhasil diperbarui");
+        window.location.reload();
+      } else {
+        alert(data.message);
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
     }
   };
 
@@ -302,7 +334,7 @@ export default function MahasiswaDashboard() {
                 <div className="flex gap-8">
                   <div>
                     <p className="text-sm text-zinc-400 mb-1">IPK Saat Ini</p>
-                    <p className="text-2xl font-bold text-white">3.85</p>
+                    <p className="text-2xl font-bold text-white">{mhs?.ipk ? mhs.ipk.toFixed(2) : "0.00"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-zinc-400 mb-1">Kehadiran (Semester Ini)</p>
@@ -314,16 +346,22 @@ export default function MahasiswaDashboard() {
               {/* Quick Time */}
               <TiltCard className="flex flex-col justify-center items-center text-center">
                 <Clock size={40} className="text-amber-500 mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
-                <h4 className="text-lg font-medium text-zinc-300">Jadwal Selanjutnya</h4>
-                <p className="text-2xl font-bold text-white mt-2">Pemrograman Web</p>
-                <p className="text-orange-400 mt-1 font-medium">10:00 - 12:30 WITA</p>
-                <p className="text-sm text-zinc-500 mt-1">Ruang Lab Komputer 1</p>
+                <h4 className="text-lg font-medium text-zinc-300">Mata Kuliah Tersedia</h4>
+                <p className="text-2xl font-bold text-white mt-2">{mataKuliah.length > 0 ? (mataKuliah[0] as any).nama_mk : "Belum Ada"}</p>
+                <p className="text-orange-400 mt-1 font-medium">{mataKuliah.length > 0 ? `${(mataKuliah[0] as any).sks} SKS` : "-"}</p>
+                <p className="text-sm text-zinc-500 mt-1">{mataKuliah.length > 0 ? ((mataKuliah[0] as any).dosen?.nama_dosen || "Dosen Belum Ditentukan") : "-"}</p>
               </TiltCard>
 
               {/* Scan Absensi Card - Main Action */}
               <TiltCard 
                 className="md:col-span-2 group border border-amber-500/20 hover:border-amber-500/50 bg-gradient-to-br from-amber-500/10 to-transparent"
-                onClick={() => setShowScanner(true)}
+                onClick={() => {
+                  if (geoStatus.includes("Luar") || geoStatus.includes("Mati")) {
+                    alert("Akses ditolak! Anda berada di luar radius aman kampus (50m) atau GPS tidak aktif.");
+                    return;
+                  }
+                  setShowScanner(true);
+                }}
               >
                 <div className="flex justify-between items-center h-full">
                   <div className="space-y-3 md:space-y-4">
@@ -403,28 +441,22 @@ export default function MahasiswaDashboard() {
 
           {activeTab === "Jadwal" && (
             <TiltCard className="w-full border border-stone-800 animate-in fade-in zoom-in-95 duration-500">
-               <h2 className="text-2xl font-bold text-white mb-6">Jadwal Kuliah Anda</h2>
+               <h2 className="text-2xl font-bold text-white mb-6">Mata Kuliah Tersedia</h2>
                <div className="space-y-4">
-                 <div className="p-6 rounded-2xl bg-white/5 border-l-4 border-l-amber-500 flex justify-between items-center">
-                    <div>
-                      <h4 className="font-bold text-xl text-white">Pemrograman Web</h4>
-                      <p className="text-stone-400">Dr. Arba Hariyanto, M.Kom</p>
-                    </div>
-                    <div className="text-right">
-                       <p className="font-bold text-amber-500">10:00 - 12:30 WITA</p>
-                       <p className="text-sm text-stone-400">Lab Komputer 1</p>
-                    </div>
-                 </div>
-                 <div className="p-6 rounded-2xl bg-white/5 border-l-4 border-l-orange-500 flex justify-between items-center">
-                    <div>
-                      <h4 className="font-bold text-xl text-white">Sistem Basis Data</h4>
-                      <p className="text-stone-400">Ir. Budi Santoso, MT</p>
-                    </div>
-                    <div className="text-right">
-                       <p className="font-bold text-orange-500">13:30 - 15:00 WITA</p>
-                       <p className="text-sm text-stone-400">Ruang Kelas A3</p>
-                    </div>
-                 </div>
+                 {mataKuliah.length > 0 ? mataKuliah.map((mk: any, i: number) => (
+                   <div key={i} className="p-6 rounded-2xl bg-white/5 border-l-4 border-l-amber-500 flex justify-between items-center hover:bg-white/10 transition-colors">
+                      <div>
+                        <h4 className="font-bold text-xl text-white">{mk.nama_mk}</h4>
+                        <p className="text-stone-400 font-mono mt-1 text-sm">{mk.kode_mk}</p>
+                      </div>
+                      <div className="text-right">
+                         <p className="font-bold text-amber-500">{mk.dosen?.nama_dosen || "Belum ada Dosen"}</p>
+                         <p className="text-sm text-stone-400 mt-1">{mk.sks} SKS</p>
+                      </div>
+                   </div>
+                 )) : (
+                   <div className="text-center py-6 text-stone-500">Belum ada data mata kuliah.</div>
+                 )}
                </div>
             </TiltCard>
           )}
@@ -449,6 +481,22 @@ export default function MahasiswaDashboard() {
                           <p className="text-xs text-stone-500 uppercase font-bold tracking-wider mb-1">Status Mahasiswa</p>
                           <p className="text-green-400 font-medium">Terdaftar Aktif</p>
                        </div>
+                    </div>
+                    <div className="mt-6 bg-white/5 p-4 rounded-xl border border-white/10 flex items-center justify-between">
+                       <div>
+                         <p className="text-sm text-zinc-400 mb-1">Perbarui IPK</p>
+                         <input 
+                           type="number" 
+                           step="0.01" 
+                           value={ipkForm} 
+                           onChange={(e) => setIpkForm(e.target.value)} 
+                           placeholder="Contoh: 3.85"
+                           className="bg-black/50 border border-amber-500/50 rounded-lg px-3 py-2 text-white w-32 focus:outline-none focus:border-amber-400"
+                         />
+                       </div>
+                       <button onClick={handleUpdateIpk} className="px-4 py-2 bg-amber-500 text-black font-bold rounded-xl hover:bg-amber-400 transition-colors">
+                         Simpan
+                       </button>
                     </div>
                  </div>
               </div>
