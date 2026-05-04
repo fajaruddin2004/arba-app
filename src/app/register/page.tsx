@@ -26,6 +26,12 @@ export default function RegisterPage() {
     setError("");
 
     try {
+      if (formData.nim_nidn.length < 7 || !/^\d+$/.test(formData.nim_nidn)) {
+        setError("NIM / NIDN / NIP harus berupa angka dan minimal 7 karakter.");
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,10 +96,10 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-stone-400 uppercase tracking-wider">{formData.role === "MAHASISWA" ? "NIM" : formData.role === "DOSEN" ? "NIDN" : "ID Pegawai (Opsional)"}</label>
+            <label className="text-xs font-bold text-stone-400 uppercase tracking-wider">{formData.role === "MAHASISWA" ? "NIM" : formData.role === "DOSEN" ? "NIDN" : "NIP Pegawai"}</label>
             <div className="relative">
               <Hash size={18} className="absolute left-3 top-3.5 text-stone-500" />
-              <input type="text" name="nim_nidn" value={formData.nim_nidn} onChange={handleChange} className="w-full bg-[#0a0604] border border-stone-800 rounded-xl p-3 pl-10 text-white focus:border-amber-500 focus:outline-none transition-colors" placeholder={`Masukkan ${formData.role === "MAHASISWA" ? "NIM" : formData.role === "DOSEN" ? "NIDN" : "ID Pegawai"}...`} />
+              <input required type="text" name="nim_nidn" value={formData.nim_nidn} onChange={handleChange} className="w-full bg-[#0a0604] border border-stone-800 rounded-xl p-3 pl-10 text-white focus:border-amber-500 focus:outline-none transition-colors" placeholder={`Masukkan ${formData.role === "MAHASISWA" ? "NIM" : formData.role === "DOSEN" ? "NIDN" : "NIP Pegawai"}...`} />
             </div>
           </div>
 

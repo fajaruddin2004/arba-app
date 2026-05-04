@@ -65,11 +65,13 @@ model tb_mata_kuliah {
   waktu   String?
   ruangan String?
   dosen   tb_dosen? @relation(fields: [nidn], references: [nidn])
+  presensi tb_presensi[]
 }
 
 model tb_ruangan {
   kode_ruangan String @id
   nama_ruangan String
+  presensi     tb_presensi[]
 }
 
 model tb_koordinat_kampus {
@@ -97,6 +99,8 @@ model tb_presensi {
   nim         String
   nidn        String
   id_sesi     Int?
+  kode_mk     String?
+  kode_ruangan String?
   waktu_absen DateTime @default(now())
   lat_mhs     String
   long_mhs    String
@@ -105,6 +109,8 @@ model tb_presensi {
   mahasiswa tb_mahasiswa   @relation(fields: [nim], references: [nim])
   dosen     tb_dosen       @relation(fields: [nidn], references: [nidn])
   sesi      tb_sesi_kelas? @relation(fields: [id_sesi], references: [id_sesi])
+  mata_kuliah tb_mata_kuliah? @relation(fields: [kode_mk], references: [kode_mk])
+  ruangan     tb_ruangan?     @relation(fields: [kode_ruangan], references: [kode_ruangan])
 }
 
 model tb_kuesioner {

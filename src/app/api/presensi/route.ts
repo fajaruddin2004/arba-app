@@ -61,12 +61,22 @@ export async function POST(req: Request) {
        return NextResponse.json({ message: "Anda sudah absen untuk sesi ini" }, { status: 400 });
     }
 
+    // Cari kode_mk dan ruangan dari tabel mata_kuliah berdasarkan nama_mk dan nidn
+    const mk = await prisma.tb_mata_kuliah.findFirst({
+      where: {
+        nama_mk: sesi.nama_mk,
+        nidn: sesi.nidn
+      }
+    });
+
     // Insert presensi linked to session
     const newPresensi = await prisma.tb_presensi.create({
       data: {
         nim,
         nidn: sesi.nidn,
         id_sesi: sesi.id_sesi,
+        kode_mk: mk?.kode_mk || null,
+        kode_ruangan: mk?.ruangan || null,
         lat_mhs: lat_mhs.toString(),
         long_mhs: long_mhs.toString(),
         status

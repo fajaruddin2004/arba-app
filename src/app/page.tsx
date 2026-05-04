@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  MapPin, 
-  QrCode, 
-  Star, 
+import {
+  MapPin,
+  QrCode,
+  Star,
   ChevronRight,
   User,
   GraduationCap,
@@ -32,8 +32,8 @@ const TiltCard = ({ children, onClick, className = "", intensity = 10 }: { child
     const y = e.clientY - box.top;
     const centerX = box.width / 2;
     const centerY = box.height / 2;
-    
-    const rotateX = ((y - centerY) / centerY) * -intensity; 
+
+    const rotateX = ((y - centerY) / centerY) * -intensity;
     const rotateY = ((x - centerX) / centerX) * intensity;
 
     card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
@@ -61,7 +61,7 @@ const TiltCard = ({ children, onClick, className = "", intensity = 10 }: { child
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [activeTab, setActiveTab] = useState('visi'); 
+  const [activeTab, setActiveTab] = useState('visi');
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -82,16 +82,16 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#050301] text-[#e8e6e3] font-sans overflow-x-hidden selection:bg-amber-500/30 relative">
-      
+
       {/* --- Dynamic Animated Background --- */}
-      <div 
+      <div
         className="fixed inset-0 z-0 pointer-events-none transition-transform duration-700 ease-out"
         style={{ transform: `translate(${mousePos.x * -20}px, ${mousePos.y * -20}px)` }}
       >
         <div className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] rounded-full bg-amber-600/5 blur-[120px] mix-blend-screen animate-blob"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-orange-700/10 blur-[150px] mix-blend-screen animate-blob animation-delay-2000"></div>
         <div className="absolute top-[50%] left-[40%] w-[40vw] h-[40vw] rounded-full bg-yellow-600/5 blur-[100px] mix-blend-screen animate-blob animation-delay-4000"></div>
-        
+
         {/* Abstract 3D Grid Lines */}
         <div className="absolute inset-0 opacity-[0.12]" style={{
           backgroundImage: `linear-gradient(rgba(217,119,6,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(217,119,6,0.3) 1px, transparent 1px)`,
@@ -148,22 +148,22 @@ export default function LandingPage() {
       {/* --- Floating Navbar (Pill Shape) --- */}
       <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
         <nav className={`transition-all duration-500 pointer-events-auto flex items-center justify-between px-6 py-3 rounded-full ${isScrolled ? 'glass-pill w-full max-w-5xl' : 'w-full max-w-7xl'}`}>
-          <div className="flex items-center gap-3">
-            <img src="/image_09edb7.jpg" alt="Logo STIKOM 22 Januari" className="w-11 h-11 object-contain drop-shadow-[0_0_12px_rgba(217,119,6,0.6)]" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <img src="/logo-stikom.png" alt="Logo STIKOM 22 Januari" className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-[0_0_12px_rgba(217,119,6,0.6)]" />
             {!isScrolled && (
               <h1 className="font-bold text-lg text-white tracking-widest hidden sm:block">
-                STIKOM <span className="text-amber-500 font-light">22 JAN</span>
+                STIKOM <span className="text-amber-500 font-light">22 JANUARI</span>
               </h1>
             )}
           </div>
-          
+
           <div className="hidden md:flex items-center gap-8 bg-black/20 px-8 py-2 rounded-full border border-white/5">
             <a href="#" className="text-sm font-medium text-stone-300 hover:text-amber-400 transition-colors">Beranda</a>
             <a href="#info-kampus" className="text-sm font-medium text-stone-300 hover:text-amber-400 transition-colors">Profil Kampus</a>
             <a href="#fitur-utama" className="text-sm font-medium text-stone-300 hover:text-amber-400 transition-colors">Fitur Inovasi</a>
           </div>
-          
-          <a 
+
+          <a
             href="/login"
             className="px-6 py-2.5 rounded-full bg-white text-black font-bold text-sm hover:bg-amber-400 hover:text-black shadow-[0_0_20px_rgba(255,255,255,0.2)] transform transition-all hover:scale-105 flex items-center gap-2 group"
           >
@@ -175,9 +175,9 @@ export default function LandingPage() {
       {/* --- HERO SECTION (True 3D Isometric View) --- */}
       <div className="relative min-h-screen flex items-center pt-20 overflow-hidden z-10">
         <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-10 items-center w-full">
-          
+
           {/* Kolom Teks */}
-          <div 
+          <div
             className="space-y-8 z-20 transition-transform duration-700 ease-out"
             style={{ transform: `translate(${mousePos.x * 15}px, ${mousePos.y * 15}px)` }}
           >
@@ -185,20 +185,20 @@ export default function LandingPage() {
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
               Sistem Akademik Terpadu
             </div>
-            
-            <h1 className="text-6xl lg:text-[5rem] font-black leading-[1.1] tracking-tighter text-white">
-              Sistem <br/>
+
+            <h1 className="text-5xl sm:text-6xl lg:text-[5rem] font-black leading-[1.1] tracking-tighter text-white">
+              Sistem <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-500 to-orange-600 text-glow">
                 Presensi
               </span> Pintar.
             </h1>
-            
+
             <p className="text-lg text-stone-400 leading-relaxed max-w-md font-light">
               Meninggalkan cara konvensional. Menghadirkan ekosistem akademik mutakhir dengan validasi <b className="text-white">Geolokasi</b> dan <b className="text-white">Evaluasi Dosen</b> terpusat di STIKOM 22 Januari Kendari.
             </p>
 
             <div className="flex items-center gap-6 pt-4">
-              <a 
+              <a
                 href="/login"
                 className="relative group overflow-hidden px-8 py-4 rounded-full bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-lg transition-all hover:scale-105 shadow-[0_0_30px_rgba(217,119,6,0.4)]"
               >
@@ -212,9 +212,9 @@ export default function LandingPage() {
 
           {/* THE 3D ISOMETRIC STAGE */}
           <div className="relative w-full h-[400px] lg:h-[600px] flex justify-center items-center perspective-[1000px] lg:perspective-[2000px] mt-10 lg:mt-0">
-            <div 
+            <div
               className="relative w-[260px] h-[350px] lg:w-[300px] lg:h-[400px] transition-transform duration-700 ease-out preserve-3d"
-              style={{ 
+              style={{
                 transform: `rotateX(${55 + mousePos.y * -10}deg) rotateZ(${-35 + mousePos.x * 10}deg) scale3d(0.8, 0.8, 0.8)`,
                 transformStyle: 'preserve-3d'
               }}
@@ -241,7 +241,7 @@ export default function LandingPage() {
               </div>
 
               {/* Layer 3: Geolokasi */}
-              <div className="absolute bottom-[-10%] left-[-20%] w-64 glass-card rounded-2xl p-4 flex items-center gap-4 float-layer-3 shadow-[0_30px_50px_rgba(0,0,0,0.6)]" style={{ transform: 'translateZ(120px)' }}>
+              <div className="absolute bottom-[-10%] left-0 sm:left-[-20%] w-64 glass-card rounded-2xl p-4 flex items-center gap-4 float-layer-3 shadow-[0_30px_50px_rgba(0,0,0,0.6)]" style={{ transform: 'translateZ(120px)' }}>
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
                   <MapPin size={24} className="text-white" />
                 </div>
@@ -257,7 +257,7 @@ export default function LandingPage() {
       </div>
 
       {/* --- PROFIL KAMPUS (BENTO GRID LENGKAP DENGAN FOTO) --- */}
-      <section id="info-kampus" className="py-24 relative z-10 bg-[#080503] border-t border-stone-800/50">
+      <section id="info-kampus" className="py-16 md:py-24 relative z-10 bg-[#080503] border-t border-stone-800/50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col items-center text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
@@ -268,18 +268,18 @@ export default function LandingPage() {
 
           {/* PERBAIKAN GRID: Menambahkan aturan grid dinamis untuk tablet (md:grid-cols-2) agar tidak gepeng */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 auto-rows-[minmax(180px,auto)]">
-            
+
             {/* Foto Gedung Kampus (Grid Besar Kiri) */}
             <TiltCard intensity={3} className="md:col-span-2 lg:col-span-6 lg:row-span-2">
               <div className="relative w-full h-full min-h-[400px] rounded-[2.5rem] overflow-hidden group border border-stone-800 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                 {/* [Gambar Gedung STIKOM 22 Januari] */}
-                <img 
-                  src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" 
-                  alt="[Gambar Gedung STIKOM 22 Januari]" 
+                <img
+                  src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+                  alt="[Gambar Gedung STIKOM 22 Januari]"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ease-in-out opacity-80 group-hover:opacity-100"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0a0502] via-[#0a0502]/40 to-transparent"></div>
-                
+
                 {/* Overlay Text */}
                 <div className="absolute bottom-10 left-10 right-10 flex justify-between items-end">
                   <div>
@@ -298,11 +298,11 @@ export default function LandingPage() {
             {/* Visi / Sejarah (Kanan Atas) */}
             <div className="md:col-span-2 lg:col-span-6 glass-card rounded-[2.5rem] p-8 flex flex-col justify-between">
               <div className="flex gap-2 mb-6">
-                <button 
+                <button
                   onClick={() => setActiveTab('visi')}
                   className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'visi' ? 'bg-amber-500 text-black shadow-[0_0_15px_rgba(217,119,6,0.4)]' : 'bg-stone-900 text-stone-400 hover:text-white'}`}
                 >Visi 2040</button>
-                <button 
+                <button
                   onClick={() => setActiveTab('sejarah')}
                   className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'sejarah' ? 'bg-amber-500 text-black shadow-[0_0_15px_rgba(217,119,6,0.4)]' : 'bg-stone-900 text-stone-400 hover:text-white'}`}
                 >Sejarah</button>
@@ -393,7 +393,7 @@ export default function LandingPage() {
                 </div>
               </TiltCard>
             </div>
-            
+
             {/* Penjelasan Kanan */}
             <div className="w-full lg:w-1/2 space-y-6">
               <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/20">
@@ -405,11 +405,11 @@ export default function LandingPage() {
               </p>
               <ul className="space-y-4 pt-4">
                 <li className="flex items-start gap-3">
-                  <CheckCircle2 className="text-amber-500 mt-1 shrink-0" size={20}/>
+                  <CheckCircle2 className="text-amber-500 mt-1 shrink-0" size={20} />
                   <p className="text-stone-300"><b>Akurasi Spasial:</b> Presensi hanya berhasil jika mahasiswa fisik berada dalam radius STIKOM 22 Januari.</p>
                 </li>
                 <li className="flex items-start gap-3">
-                  <CheckCircle2 className="text-amber-500 mt-1 shrink-0" size={20}/>
+                  <CheckCircle2 className="text-amber-500 mt-1 shrink-0" size={20} />
                   <p className="text-stone-300"><b>Real-time Dashboard:</b> Nama mahasiswa yang berhasil absen langsung muncul di layar dosen saat itu juga.</p>
                 </li>
               </ul>
@@ -423,7 +423,7 @@ export default function LandingPage() {
               <TiltCard intensity={8}>
                 <div className="relative w-full aspect-square max-w-[500px] mx-auto flex items-center justify-center">
                   <div className="absolute inset-0 bg-blue-600/10 rounded-full blur-2xl"></div>
-                  
+
                   {/* Susunan UI Cards 3D bertumpuk */}
                   <div className="relative w-[320px] h-[400px]" style={{ transformStyle: 'preserve-3d' }}>
                     {/* Card Belakang */}
@@ -442,12 +442,12 @@ export default function LandingPage() {
                           <h4 className="text-white font-bold text-lg">Rekayasa Perangkat Lunak</h4>
                         </div>
                         <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
-                          <Star className="text-amber-500 fill-amber-500" size={20}/>
+                          <Star className="text-amber-500 fill-amber-500" size={20} />
                         </div>
                       </div>
                       <p className="text-stone-300 text-sm mb-4">Penguasaan materi oleh dosen pengampu:</p>
                       <div className="flex justify-between gap-2 mb-8">
-                        {[1,2,3,4,5].map(i => (
+                        {[1, 2, 3, 4, 5].map(i => (
                           <div key={i} className={`flex-1 aspect-square rounded-lg flex items-center justify-center font-bold text-sm ${i === 5 ? 'bg-amber-500 text-black' : 'bg-stone-900 border border-stone-800 text-stone-500'}`}>{i}</div>
                         ))}
                       </div>
@@ -455,19 +455,19 @@ export default function LandingPage() {
                     </div>
                     {/* Floating Graph Element */}
                     <div className="absolute -bottom-6 -left-10 glass-card p-4 rounded-xl flex items-end gap-2 float-layer-3 shadow-2xl" style={{ transform: 'translateZ(80px)' }}>
-                       <div className="w-4 h-8 bg-orange-600/50 rounded-t-sm"></div>
-                       <div className="w-4 h-16 bg-orange-500/80 rounded-t-sm"></div>
-                       <div className="w-4 h-12 bg-amber-600/50 rounded-t-sm"></div>
-                       <div className="w-4 h-20 bg-amber-400 rounded-t-sm relative">
-                         <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full shadow-[0_0_10px_white]"></div>
-                       </div>
-                       <Activity className="text-amber-400 ml-2" size={24}/>
+                      <div className="w-4 h-8 bg-orange-600/50 rounded-t-sm"></div>
+                      <div className="w-4 h-16 bg-orange-500/80 rounded-t-sm"></div>
+                      <div className="w-4 h-12 bg-amber-600/50 rounded-t-sm"></div>
+                      <div className="w-4 h-20 bg-amber-400 rounded-t-sm relative">
+                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full shadow-[0_0_10px_white]"></div>
+                      </div>
+                      <Activity className="text-amber-400 ml-2" size={24} />
                     </div>
                   </div>
                 </div>
               </TiltCard>
             </div>
-            
+
             {/* Penjelasan Kiri */}
             <div className="w-full lg:w-1/2 space-y-6">
               <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/20">
@@ -479,11 +479,11 @@ export default function LandingPage() {
               </p>
               <ul className="space-y-4 pt-4">
                 <li className="flex items-start gap-3">
-                  <Star className="text-amber-500 mt-1 shrink-0 fill-amber-500/20" size={20}/>
+                  <Star className="text-amber-500 mt-1 shrink-0 fill-amber-500/20" size={20} />
                   <p className="text-stone-300"><b>Rekapitulasi Otomatis:</b> Nilai yang disubmit langsung dikalkulasi menjadi skor KPI (Key Performance Indicator) dosen.</p>
                 </li>
                 <li className="flex items-start gap-3">
-                  <Star className="text-amber-500 mt-1 shrink-0 fill-amber-500/20" size={20}/>
+                  <Star className="text-amber-500 mt-1 shrink-0 fill-amber-500/20" size={20} />
                   <p className="text-stone-300"><b>Laporan Pimpinan:</b> Pimpinan (Waket 1 & Ketua) menerima dashboard analisis data matang untuk penjaminan mutu kampus.</p>
                 </li>
               </ul>
@@ -500,7 +500,7 @@ export default function LandingPage() {
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-800 p-[1px] shadow-[0_0_20px_rgba(217,119,6,0.3)]">
               <div className="w-full h-full bg-[#0a0604] rounded-2xl flex items-center justify-center overflow-hidden">
                 {/* Logo STIKOM 22 Januari di bagian Footer */}
-                <img src="/image_09edb7.jpg" alt="Logo STIKOM" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(217,119,6,0.5)]" />
+                <img src="/logo-stikom.png" alt="Logo STIKOM" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(217,119,6,0.5)]" />
               </div>
             </div>
             <div>

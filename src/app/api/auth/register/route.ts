@@ -10,6 +10,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Missing fields" }, { status: 400 });
     }
 
+    // Validasi NIM / NIDN / NIP
+    if (role === "MAHASISWA" || role === "DOSEN") {
+      if (!nim_nidn) {
+        return NextResponse.json({ message: "NIM / NIDN wajib diisi" }, { status: 400 });
+      }
+    }
+    
+    if (nim_nidn) {
+      if (nim_nidn.length < 7 || !/^\d+$/.test(nim_nidn)) {
+        return NextResponse.json({ message: "NIM / NIDN / NIP harus berupa angka dan minimal 7 karakter" }, { status: 400 });
+      }
+    }
+
     // Gunakan nim_nidn sebagai username jika diisi, jika tidak fallback ke email
     const username = nim_nidn || email;
 

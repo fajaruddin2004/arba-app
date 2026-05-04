@@ -47,7 +47,7 @@ export async function GET(req: Request) {
         where: { nidn, status: "AKTIF" },
         include: {
           presensi: {
-            include: { mahasiswa: true },
+            include: { mahasiswa: { select: { nama_mahasiswa: true } } },
             orderBy: { waktu_absen: "desc" }
           }
         }
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
       },
       include: {
         presensi: {
-          include: { mahasiswa: true }
+          include: { mahasiswa: { select: { nama_mahasiswa: true } } }
         }
       }
     });

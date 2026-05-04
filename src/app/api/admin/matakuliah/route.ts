@@ -83,7 +83,19 @@ export async function GET(req: Request) {
 
     const mk = await prisma.tb_mata_kuliah.findMany({
       where: nidn ? { nidn } : {},
-      include: { dosen: true },
+      select: {
+        kode_mk: true,
+        nama_mk: true,
+        sks: true,
+        hari: true,
+        waktu: true,
+        ruangan: true,
+        dosen: {
+          select: {
+            nama_dosen: true
+          }
+        }
+      },
       orderBy: { nama_mk: "asc" }
     });
     return NextResponse.json({ data: mk }, { status: 200 });

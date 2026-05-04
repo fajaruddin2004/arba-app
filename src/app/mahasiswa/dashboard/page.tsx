@@ -242,8 +242,8 @@ export default function MahasiswaDashboard() {
       {/* Sidebar / Topnav on Mobile */}
       <aside className="w-full lg:w-64 lg:h-screen border-b lg:border-b-0 lg:border-r border-glass-border glass-panel z-20 flex flex-row lg:flex-col items-center lg:items-start py-4 lg:py-8 px-4 lg:px-0 lg:rounded-r-[40px] sticky top-0 overflow-x-auto gap-4 lg:gap-0">
         <div className="flex items-center gap-3 lg:px-8 lg:mb-12 shrink-0">
-          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-lg lg:text-xl shadow-[0_0_20px_rgba(245,158,11,0.4)]">
-            S
+          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white/5 p-1 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+            <img src="/logo-stikom.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div className="hidden lg:block">
             <h1 className="font-bold text-lg tracking-wider text-white">STIKOM</h1>

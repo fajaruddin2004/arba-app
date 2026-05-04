@@ -21,21 +21,26 @@ export async function GET(req: Request) {
 
     const user = await prisma.tb_user.findUnique({
       where: { id_user: userId },
-      include: {
+      select: {
+        id_user: true,
+        username: true,
+        role: true,
         mahasiswa: {
-          include: {
+          select: {
+            nim: true,
+            nama_mahasiswa: true,
+            ipk: true,
             presensi: {
-              include: { dosen: true },
-              orderBy: { waktu_absen: "desc" }
+              take: 5,
+              orderBy: { waktu_absen: "desc" },
+              include: { dosen: { select: { nama_dosen: true } } }
             }
           }
         },
         dosen: {
-          include: {
-            presensi: {
-              include: { mahasiswa: true },
-              orderBy: { waktu_absen: "desc" }
-            }
+          select: {
+            nidn: true,
+            nama_dosen: true
           }
         }
       }
