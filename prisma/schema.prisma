@@ -34,7 +34,7 @@ model tb_mahasiswa {
   nama_mahasiswa  String
   id_jurusan      Int?
   id_semester     Int?
-  ipk             Float?      @default(0)
+  jenis_kelamin   String?
 
   user     tb_user      @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
   jurusan  tb_jurusan?  @relation(fields: [id_jurusan], references: [id_jurusan])

@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
     }
 
-    const { nim, nama_mahasiswa } = await req.json();
+    const { nim, nama_mahasiswa, id_jurusan, id_semester, jenis_kelamin } = await req.json();
 
     if (!nim || !nama_mahasiswa) {
       return NextResponse.json({ message: "NIM dan Nama Mahasiswa wajib diisi" }, { status: 400 });
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     }
 
     // Hash default password
-    const defaultPassword = await bcrypt.hash("stikom123", 10);
+    const defaultPassword = await bcrypt.hash("stikom22jkendari", 10);
 
     // Use interactive transaction to guarantee consistency
     await prisma.$transaction(async (tx) => {
@@ -59,11 +59,14 @@ export async function POST(req: Request) {
           nim,
           nama_mahasiswa,
           id_user: newUser.id_user,
+          id_jurusan: id_jurusan ? parseInt(id_jurusan) : null,
+          id_semester: id_semester ? parseInt(id_semester) : null,
+          jenis_kelamin: jenis_kelamin || null
         }
       });
     });
 
-    return NextResponse.json({ message: "Mahasiswa berhasil ditambahkan dengan password default: stikom123" }, { status: 201 });
+    return NextResponse.json({ message: "Mahasiswa berhasil ditambahkan dengan password default: stikom22jkendari" }, { status: 201 });
   } catch (error: any) {
     console.error(error);
     return NextResponse.json({ message: "Terjadi kesalahan", error: error.message }, { status: 500 });
@@ -95,3 +98,37 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ message: "Terjadi kesalahan", error: error.message }, { status: 500 });
   }
 }
+
+export async function PUT(req: Request) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    if (!token) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+
+    const decoded: any = jwt.verify(token, JWT_SECRET);
+    if (decoded.role !== "ADMIN" && decoded.role !== "PIMPINAN") {
+      return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
+    }
+
+    const { nim, nama_mahasiswa, id_jurusan, id_semester, jenis_kelamin } = await req.json();
+
+    if (!nim || !nama_mahasiswa) {
+      return NextResponse.json({ message: "NIM dan Nama Mahasiswa wajib diisi" }, { status: 400 });
+    }
+
+    const updated = await prisma.tb_mahasiswa.update({
+      where: { nim },
+      data: {
+        nama_mahasiswa,
+        id_jurusan: id_jurusan ? parseInt(id_jurusan) : null,
+        id_semester: id_semester ? parseInt(id_semester) : null,
+        jenis_kelamin: jenis_kelamin || null
+      }
+    });
+
+    return NextResponse.json({ message: "Data mahasiswa berhasil diubah", data: updated }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ message: "Terjadi kesalahan", error: error.message }, { status: 500 });
+  }
+}
+

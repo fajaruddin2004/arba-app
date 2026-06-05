@@ -37,12 +37,14 @@ const TiltCard = ({ children, onClick, className = "", intensity = 10 }: { child
     const rotateX = ((y - centerY) / centerY) * -intensity;
     const rotateY = ((x - centerX) / centerX) * intensity;
 
+    card.style.transition = 'none';
     card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
   };
 
   const handleMouseLeave = () => {
     const card = cardRef.current;
     if (!card) return;
+    card.style.transition = 'transform 300ms ease-out';
     card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
   };
 
@@ -52,8 +54,8 @@ const TiltCard = ({ children, onClick, className = "", intensity = 10 }: { child
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onClick={onClick}
-      className={`transition-transform duration-300 ease-out cursor-pointer ${className}`}
-      style={{ transformStyle: 'preserve-3d' }}
+      className={`cursor-pointer ${className}`}
+      style={{ transformStyle: 'preserve-3d', transition: 'transform 300ms ease-out' }}
     >
       {children}
     </div>
@@ -63,14 +65,29 @@ const TiltCard = ({ children, onClick, className = "", intensity = 10 }: { child
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeTab, setActiveTab] = useState('visi');
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const bgRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    
+    let ticking = false;
     const handleMouseMove = (e: MouseEvent) => {
-      const x = (e.clientX / window.innerWidth - 0.5) * 2;
-      const y = (e.clientY / window.innerHeight - 0.5) * 2;
-      setMousePos({ x, y });
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const x = (e.clientX / window.innerWidth - 0.5) * 2;
+          const y = (e.clientY / window.innerHeight - 0.5) * 2;
+          
+          if (bgRef.current) bgRef.current.style.transform = `translate(${x * -20}px, ${y * -20}px)`;
+          if (textRef.current) textRef.current.style.transform = `translate(${x * 15}px, ${y * 15}px)`;
+          // Hapus rotasi flat dari stageRef, biarkan logo bergerak mengikuti mouse namun tetap berdiri tegak
+          if (stageRef.current) stageRef.current.style.transform = `rotateX(${y * -15}deg) rotateY(${x * 15}deg) scale3d(1.05, 1.05, 1.05)`;
+          
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -86,8 +103,8 @@ export default function LandingPage() {
 
       {/* --- Dynamic Animated Background --- */}
       <div
+        ref={bgRef}
         className="fixed inset-0 z-0 pointer-events-none transition-transform duration-700 ease-out"
-        style={{ transform: `translate(${mousePos.x * -20}px, ${mousePos.y * -20}px)` }}
       >
         <div className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] rounded-full bg-[#d4a373]/10 dark:bg-amber-600/5 blur-[120px] dark:mix-blend-screen animate-blob"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-[#c19a6b]/10 dark:bg-orange-700/10 blur-[150px] dark:mix-blend-screen animate-blob animation-delay-2000"></div>
@@ -134,27 +151,29 @@ export default function LandingPage() {
         .float-layer-3 { animation: float-3d 7s ease-in-out infinite 1s; }
 
         @keyframes float-3d {
-          0%, 100% { transform: translateY(0) rotateX(0) rotateY(0); }
-          50% { transform: translateY(-15px) rotateX(2deg) rotateY(-2deg); }
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-15px); }
         }
 
-        .text-glow { text-shadow: 0 0 30px rgba(217, 119, 6, 0.5); }
-        .gradient-text {
-          background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #b45309 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
+        @keyframes wobble-3d {
+          0% { transform: rotateX(10deg) rotateY(-20deg) translateY(0); }
+          50% { transform: rotateX(-5deg) rotateY(20deg) translateY(-20px); }
+          100% { transform: rotateX(10deg) rotateY(-20deg) translateY(0); }
+        }
+        .animate-wobble-3d {
+          animation: wobble-3d 8s ease-in-out infinite;
         }
       `}</style>
 
       {/* --- Floating Navbar (Pill Shape) --- */}
-      <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-        <nav className={`transition-all duration-500 pointer-events-auto flex items-center justify-between px-6 py-3 rounded-full ${isScrolled ? 'glass-pill w-full max-w-5xl' : 'w-full max-w-7xl'}`}>
+      <div className="fixed top-2 sm:top-6 left-0 right-0 z-50 flex justify-center px-2 sm:px-4 pointer-events-none">
+        <nav className={`transition-all duration-500 pointer-events-auto flex items-center justify-between px-4 sm:px-6 py-2 sm:py-3 rounded-full ${isScrolled ? 'glass-pill w-full max-w-5xl' : 'w-full max-w-7xl'}`}>
           <div className="flex items-center gap-2 sm:gap-3">
             <img src="/logo-stikom.png" alt="Logo STIKOM 22 Januari" className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow-[0_0_12px_rgba(217,119,6,0.6)]" />
             {!isScrolled && (
-              <h1 className="font-bold text-lg text-foreground tracking-widest hidden sm:block">
-                STIKOM <span className="text-amber-500 font-light">22 JANUARI</span>
-              </h1>
+              <span className="font-black text-xl sm:text-2xl tracking-widest text-black dark:text-white hidden sm:block">
+                STIKOM 22 JANUARI
+              </span>
             )}
           </div>
 
@@ -182,19 +201,18 @@ export default function LandingPage() {
 
           {/* Kolom Teks */}
           <div
+            ref={textRef}
             className="space-y-8 z-20 transition-transform duration-700 ease-out"
-            style={{ transform: `translate(${mousePos.x * 15}px, ${mousePos.y * 15}px)` }}
           >
-            <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-bold uppercase tracking-widest backdrop-blur-md">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-              Sistem Akademik Terpadu
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-red-900/20 dark:border-red-500/30 bg-red-900/5 dark:bg-red-500/10 text-red-900 dark:text-red-400 text-sm font-bold tracking-widest mb-6 shadow-[0_0_15px_rgba(153,27,27,0.1)] dark:shadow-[0_0_15px_rgba(239,68,68,0.2)] backdrop-blur-md">
+              <span className="w-2 h-2 rounded-full bg-red-600 dark:bg-red-500 animate-pulse"></span>
+              SISTEM AKADEMIK TERPADU
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-[5rem] font-black leading-[1.1] tracking-tighter text-foreground">
-              Sistem <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-500 to-orange-600 text-glow">
-                Presensi
-              </span> Pintar.
+            <h1 className="text-5xl sm:text-6xl lg:text-[5rem] font-black leading-[1.1] tracking-tight mb-8 text-[#241308] dark:text-white">
+              <span className="inline-block hover:scale-105 transition-transform cursor-default">Sistem</span><br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-br from-[#593019] to-[#241308] dark:from-[#d4a373] dark:to-[#faedcd] drop-shadow-xl inline-block hover:scale-105 transition-transform cursor-default">Presensi</span>{" "}
+              <span className="inline-block hover:scale-105 transition-transform cursor-default">Pintar.</span>
             </h1>
 
             <p className="text-lg text-foreground/70 leading-relaxed max-w-md font-light">
@@ -214,47 +232,28 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* THE 3D ISOMETRIC STAGE */}
-          <div className="relative w-full h-[400px] lg:h-[600px] flex justify-center items-center perspective-[1000px] lg:perspective-[2000px] mt-10 lg:mt-0">
-            <div
-              className="relative w-[260px] h-[350px] lg:w-[300px] lg:h-[400px] transition-transform duration-700 ease-out preserve-3d"
-              style={{
-                transform: `rotateX(${55 + mousePos.y * -10}deg) rotateZ(${-35 + mousePos.x * 10}deg) scale3d(0.8, 0.8, 0.8)`,
-                transformStyle: 'preserve-3d'
-              }}
+          {/* THE GIANT STANDING 3D LOGO */}
+          <div className="relative w-full h-[400px] lg:h-[600px] flex justify-center items-center mt-10 lg:mt-0 perspective-[2000px]">
+            <div 
+              ref={stageRef}
+              className="relative w-80 h-80 lg:w-[450px] lg:h-[450px] flex items-center justify-center animate-wobble-3d transition-transform duration-700 ease-out" 
+              style={{ transformStyle: 'preserve-3d' }}
             >
-              <div className="absolute inset-0 bg-orange-900/40 blur-[50px] rounded-[3rem] transform translate-Z-[-100px]"></div>
+              {/* Cahaya glow besar di belakang logo */}
+              <div className="absolute inset-0 rounded-full bg-amber-500/40 blur-[80px] animate-pulse" style={{ transform: 'translateZ(-50px)' }}></div>
+              <div className="absolute bottom-[-20%] w-3/4 h-10 bg-black/60 dark:bg-black/80 blur-xl rounded-[100%]" style={{ transform: 'translateZ(-60px)' }}></div>
 
-              {/* Layer 1: Base Platform */}
-              <div className="absolute inset-0 dark:bg-[#0a0502] bg-white border dark:border-stone-800 border-black/10 rounded-[2.5rem] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1),0_30px_60px_rgba(0,0,0,0.8)] float-layer-1" style={{ transform: 'translateZ(0px)' }}>
-                <div className="absolute inset-2 dark:bg-[#140b06] bg-white rounded-[2rem] overflow-hidden border dark:border-stone-900 border-black/5">
-                  <div className="h-full w-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                  <div className="absolute top-6 left-6 right-6 flex justify-between items-center">
-                    <div className="w-10 h-10 rounded-full bg-amber-500/20"></div>
-                    <div className="w-20 h-4 rounded-full dark:bg-stone-800 bg-stone-100"></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Layer 2: Barcode Scanner */}
-              <div className="absolute top-[20%] left-[10%] right-[10%] h-48 dark:bg-black/60 bg-white/80 backdrop-blur-md rounded-2xl border border-amber-500/30 flex items-center justify-center float-layer-2 shadow-[0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_20px_40px_rgba(0,0,0,0.5)]" style={{ transform: 'translateZ(60px)' }}>
-                <div className="relative w-28 h-28 border-2 border-dashed border-amber-500/70 rounded-xl flex items-center justify-center">
-                  <QrCode size={64} className="text-amber-400" />
-                  <div className="absolute top-0 left-0 w-full h-1 bg-amber-300 shadow-[0_0_20px_2px_#fcd34d] animate-[scan_2s_ease-in-out_infinite]"></div>
-                </div>
-              </div>
-
-              {/* Layer 3: Geolokasi */}
-              <div className="absolute bottom-[-10%] left-0 sm:left-[-20%] w-64 glass-card rounded-2xl p-4 flex items-center gap-4 float-layer-3" style={{ transform: 'translateZ(120px)' }}>
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
-                  <MapPin size={24} className="text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-foreground text-sm">Geofence Aktif</p>
-                  <p className="text-xs text-emerald-500 dark:text-emerald-400">Dalam Radius STIKOM 22J</p>
-                </div>
-              </div>
-
+              {/* Tumpukan Gambar untuk Efek 3D Ketebalan yang Halus */}
+              <img src="/logo-stikom.png" alt="Logo" className="absolute w-full h-full object-contain brightness-[0.1]" style={{ transform: 'translateZ(-40px)' }} />
+              <img src="/logo-stikom.png" alt="Logo" className="absolute w-full h-full object-contain brightness-[0.2]" style={{ transform: 'translateZ(-30px)' }} />
+              <img src="/logo-stikom.png" alt="Logo" className="absolute w-full h-full object-contain brightness-[0.4]" style={{ transform: 'translateZ(-20px)' }} />
+              <img src="/logo-stikom.png" alt="Logo" className="absolute w-full h-full object-contain brightness-[0.6]" style={{ transform: 'translateZ(-10px)' }} />
+              
+              {/* Gambar Utama Depan */}
+              <img src="/logo-stikom.png" alt="Logo STIKOM" className="absolute w-full h-full object-contain drop-shadow-[0_30px_40px_rgba(0,0,0,0.8)]" style={{ transform: 'translateZ(0px)' }} />
+              
+              {/* Efek Kaca/Glow Depan */}
+              <img src="/logo-stikom.png" alt="Logo" className="absolute w-full h-full object-contain opacity-30 mix-blend-screen" style={{ transform: 'translateZ(15px)' }} />
             </div>
           </div>
         </div>
@@ -368,31 +367,39 @@ export default function LandingPage() {
             {/* Visual 3D Mockup Kiri */}
             <div className="w-full lg:w-1/2 perspective-[1500px]">
               <TiltCard intensity={8}>
-                <div className="relative w-full aspect-square max-w-[500px] mx-auto">
+                <div className="relative w-full aspect-square max-w-[500px] mx-auto" style={{ transformStyle: 'preserve-3d' }}>
                   {/* Peta Lingkaran Hologram */}
-                  <div className="absolute inset-0 bg-amber-600/10 rounded-full blur-2xl"></div>
-                  <div className="absolute inset-8 rounded-full border border-amber-500/30 flex items-center justify-center" style={{ backgroundImage: 'radial-gradient(circle, transparent 40%, rgba(217,119,6,0.1) 100%)' }}>
-                    <div className="w-48 h-48 rounded-full border border-dashed border-emerald-500/50 animate-[spin_30s_linear_infinite]"></div>
+                  <div className="absolute inset-0 bg-amber-500/10 dark:bg-amber-600/10 rounded-full blur-2xl" style={{ transform: 'translateZ(-20px)' }}></div>
+                  <div className="absolute inset-8 rounded-full border border-amber-500/20 dark:border-amber-500/30 flex items-center justify-center bg-amber-50/50 dark:bg-transparent" style={{ backgroundImage: 'radial-gradient(circle, transparent 40%, rgba(217,119,6,0.05) 100%)', transform: 'translateZ(0px)' }}>
+                    <div className="w-48 h-48 rounded-full border border-dashed border-emerald-500/40 animate-[spin_30s_linear_infinite]"></div>
                     {/* Pin Tengah */}
-                    <div className="absolute flex flex-col items-center">
-                      <div className="w-16 h-16 bg-gradient-to-b from-amber-400 to-orange-600 rounded-full shadow-[0_0_30px_rgba(217,119,6,0.3)] dark:shadow-[0_0_30px_rgba(217,119,6,0.6)] flex items-center justify-center mb-2 z-10 relative">
+                    <div className="absolute flex flex-col items-center" style={{ transform: 'translateZ(40px)' }}>
+                      <div className="w-16 h-16 bg-gradient-to-b from-amber-400 to-orange-500 rounded-full shadow-[0_10px_25px_rgba(217,119,6,0.4)] flex items-center justify-center mb-2 z-10 relative border border-white/20">
                         <MapPin size={32} className="text-white" />
                         <div className="absolute inset-0 rounded-full animate-ping bg-amber-400 opacity-40"></div>
                       </div>
-                      <div className="w-24 h-6 bg-black/50 rounded-full blur-md"></div>
+                      <div className="w-24 h-6 bg-black/10 dark:bg-black/50 rounded-full blur-md"></div>
                     </div>
                   </div>
                   {/* Floating Elements UI */}
-                  <div className="absolute bottom-10 -right-4 glass-card p-5 rounded-2xl flex items-center gap-4 shadow-2xl float-layer-1">
-                    <CheckCircle2 size={32} className="text-emerald-500 dark:text-emerald-400" />
-                    <div>
-                      <p className="text-foreground font-bold">Lokasi Tervalidasi</p>
-                      <p className="text-foreground/70 text-xs">Jarak: 5m dari titik pusat</p>
+                  <div className="absolute bottom-10 right-0 sm:-right-4" style={{ transform: 'translateZ(90px)' }}>
+                    <div className="glass-card p-5 rounded-2xl flex items-center gap-4 shadow-[0_20px_40px_rgba(0,0,0,0.1)] dark:shadow-2xl float-layer-1 bg-white/90 dark:bg-[#140b06]/80 border-emerald-500/20">
+                      <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                        <CheckCircle2 size={28} className="text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <div>
+                        <p className="text-stone-800 dark:text-white font-bold text-sm">Lokasi Tervalidasi</p>
+                        <p className="text-stone-500 dark:text-stone-400 text-xs mt-0.5">Jarak: 5m dari titik pusat</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="absolute top-20 -left-4 glass-card p-4 rounded-xl flex items-center gap-3 shadow-2xl float-layer-2 border-orange-500/30">
-                    <QrCode size={24} className="text-orange-500 dark:text-orange-400" />
-                    <p className="text-foreground font-bold text-sm">QR Code Cocok</p>
+                  <div className="absolute top-20 left-0 sm:-left-4 scale-75 sm:scale-100 origin-top-left" style={{ transform: 'translateZ(110px)' }}>
+                    <div className="glass-card p-4 rounded-xl flex items-center gap-3 shadow-[0_15px_30px_rgba(0,0,0,0.1)] dark:shadow-2xl float-layer-2 border-orange-500/20 bg-white/90 dark:bg-[#140b06]/80">
+                      <div className="p-2 bg-orange-500/10 rounded-lg">
+                        <QrCode size={22} className="text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <p className="text-stone-800 dark:text-white font-bold text-sm">QR Code Cocok</p>
+                    </div>
                   </div>
                 </div>
               </TiltCard>
@@ -431,41 +438,49 @@ export default function LandingPage() {
                   {/* Susunan UI Cards 3D bertumpuk */}
                   <div className="relative w-[320px] h-[400px]" style={{ transformStyle: 'preserve-3d' }}>
                     {/* Card Belakang */}
-                    <div className="absolute top-0 left-0 right-0 h-64 glass-card rounded-2xl p-6 opacity-60 float-layer-2" style={{ transform: 'translateZ(-50px) translateY(-20px)' }}>
-                      <div className="w-1/2 h-4 bg-stone-800 rounded mb-4"></div>
-                      <div className="space-y-2">
-                        <div className="w-full h-8 bg-stone-900 rounded"></div>
-                        <div className="w-full h-8 bg-stone-900 rounded"></div>
+                    <div className="absolute top-0 left-0 right-0 h-64" style={{ transform: 'translateZ(-40px) translateY(-20px)' }}>
+                      <div className="w-full h-full glass-card rounded-2xl p-6 opacity-80 dark:opacity-60 float-layer-2 bg-stone-100/50 dark:bg-[#140b06]/50">
+                        <div className="w-1/2 h-4 bg-stone-300 dark:bg-stone-800 rounded mb-4"></div>
+                        <div className="space-y-3">
+                          <div className="w-full h-10 bg-stone-200 dark:bg-stone-900 rounded-lg"></div>
+                          <div className="w-full h-10 bg-stone-200 dark:bg-stone-900 rounded-lg"></div>
+                        </div>
                       </div>
                     </div>
                     {/* Card Utama (Depan) */}
-                    <div className="absolute inset-4 glass-card dark:bg-[#0f0a06] bg-white border-amber-500/40 rounded-3xl p-8 float-layer-1 shadow-[0_30px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_30px_60px_rgba(0,0,0,0.8)]" style={{ transform: 'translateZ(50px)' }}>
-                      <div className="flex justify-between items-start mb-6 border-b dark:border-stone-800 border-black/10 pb-4">
-                        <div>
-                          <p className="text-foreground/70 text-xs font-bold uppercase mb-1">Evaluasi Kinerja</p>
-                          <h4 className="text-foreground font-bold text-lg">Rekayasa Perangkat Lunak</h4>
+                    <div className="absolute inset-4" style={{ transform: 'translateZ(60px)' }}>
+                      <div className="w-full h-full glass-card dark:bg-[#0f0a06]/90 bg-white/95 backdrop-blur-xl border-amber-500/30 rounded-3xl p-8 float-layer-1 shadow-[0_25px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_30px_60px_rgba(0,0,0,0.6)] flex flex-col">
+                        <div className="flex justify-between items-start mb-6 border-b dark:border-stone-800 border-stone-200 pb-4">
+                          <div>
+                            <p className="text-stone-500 dark:text-stone-400 text-[10px] font-extrabold tracking-widest uppercase mb-1.5">Evaluasi Kinerja</p>
+                            <h4 className="text-stone-800 dark:text-white font-bold text-base leading-tight">Rekayasa Perangkat Lunak</h4>
+                          </div>
+                          <div className="w-10 h-10 shrink-0 bg-gradient-to-br from-amber-400/20 to-orange-500/20 rounded-full flex items-center justify-center border border-amber-500/20">
+                            <Star className="text-amber-500 fill-amber-500" size={18} />
+                          </div>
                         </div>
-                        <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
-                          <Star className="text-amber-500 fill-amber-500" size={20} />
+                        <p className="text-stone-600 dark:text-stone-400 text-xs mb-5 font-medium leading-relaxed">Penguasaan materi oleh dosen pengampu:</p>
+                        <div className="flex justify-between gap-2 mb-auto">
+                          {[1, 2, 3, 4, 5].map(i => (
+                            <div key={i} className={`flex-1 aspect-[4/5] rounded-xl flex items-center justify-center font-bold text-sm transition-all duration-300 ${i === 5 ? 'bg-gradient-to-b from-amber-400 to-orange-500 text-white shadow-[0_8px_16px_rgba(217,119,6,0.4)] scale-110' : 'dark:bg-stone-900/50 bg-stone-100 border dark:border-stone-800/50 border-stone-200 text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-800'}`}>
+                              {i}
+                            </div>
+                          ))}
                         </div>
+                        <div className="w-full mt-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl text-center font-bold text-white text-sm shadow-[0_10px_20px_rgba(217,119,6,0.3)] hover:shadow-[0_15px_30px_rgba(217,119,6,0.4)] hover:scale-[1.02] transition-all cursor-pointer">Submit Penilaian</div>
                       </div>
-                      <p className="text-foreground/80 text-sm mb-4">Penguasaan materi oleh dosen pengampu:</p>
-                      <div className="flex justify-between gap-2 mb-8">
-                        {[1, 2, 3, 4, 5].map(i => (
-                          <div key={i} className={`flex-1 aspect-square rounded-lg flex items-center justify-center font-bold text-sm ${i === 5 ? 'bg-amber-500 text-black' : 'dark:bg-stone-900 bg-stone-50 border dark:border-stone-800 border-black/5 text-foreground/50'}`}>{i}</div>
-                        ))}
-                      </div>
-                      <div className="w-full py-3 bg-amber-600 rounded-xl text-center font-bold text-white text-sm shadow-[0_0_15px_rgba(217,119,6,0.5)]">Submit Penilaian</div>
                     </div>
                     {/* Floating Graph Element */}
-                    <div className="absolute -bottom-6 -left-10 glass-card p-4 rounded-xl flex items-end gap-2 float-layer-3 shadow-2xl" style={{ transform: 'translateZ(80px)' }}>
-                      <div className="w-4 h-8 bg-orange-600/50 rounded-t-sm"></div>
-                      <div className="w-4 h-16 bg-orange-500/80 rounded-t-sm"></div>
-                      <div className="w-4 h-12 bg-amber-600/50 rounded-t-sm"></div>
-                      <div className="w-4 h-20 bg-amber-400 rounded-t-sm relative">
-                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full shadow-[0_0_10px_white]"></div>
+                    <div className="absolute -bottom-10 left-0 sm:-left-16 scale-75 sm:scale-100 origin-bottom-left" style={{ transform: 'translateZ(130px)' }}>
+                      <div className="glass-card p-4 rounded-xl flex items-end gap-2.5 float-layer-3 shadow-[0_15px_30px_rgba(0,0,0,0.1)] dark:shadow-2xl bg-white/90 dark:bg-[#140b06]/90 backdrop-blur-md border border-white/40 dark:border-white/5">
+                        <div className="w-3.5 h-6 bg-orange-400/40 rounded-sm"></div>
+                        <div className="w-3.5 h-12 bg-orange-500/70 rounded-sm"></div>
+                        <div className="w-3.5 h-8 bg-amber-500/60 rounded-sm"></div>
+                        <div className="w-3.5 h-16 bg-gradient-to-t from-orange-500 to-amber-400 rounded-sm relative shadow-[0_0_15px_rgba(217,119,6,0.4)]">
+                          <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_8px_white]"></div>
+                        </div>
+                        <Activity className="text-amber-500 ml-1.5 mb-1" size={20} />
                       </div>
-                      <Activity className="text-amber-400 ml-2" size={24} />
                     </div>
                   </div>
                 </div>

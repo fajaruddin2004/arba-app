@@ -69,6 +69,9 @@ export async function GET(req: Request) {
       select: { 
         nim: true, 
         nama_mahasiswa: true, 
+        jenis_kelamin: true,
+        jurusan: { select: { nama_jurusan: true } },
+        semester: { select: { nama_semester: true } },
         _count: { select: { presensi: true } } 
       },
       orderBy: { nama_mahasiswa: "asc" }
@@ -98,6 +101,16 @@ export async function GET(req: Request) {
       orderBy: { nama_mk: "asc" }
     });
 
+    // Daftar jurusan
+    const jurusan = await prisma.tb_jurusan.findMany({
+      orderBy: { id_jurusan: "asc" }
+    });
+
+    // Daftar semester
+    const semester = await prisma.tb_semester.findMany({
+      orderBy: { id_semester: "asc" }
+    });
+
     // Presensi terbaru
     const presensiTerbaru = await prisma.tb_presensi.findMany({
       take: 20,
@@ -116,7 +129,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       mhsCount, dosenCount, mkCount, presensiHariIni, totalPresensi,
-      chartArray, mahasiswa, dosen, mataKuliah, presensiTerbaru
+      chartArray, mahasiswa, dosen, mataKuliah, presensiTerbaru, jurusan, semester
     }, { status: 200 });
 
   } catch (error: any) {

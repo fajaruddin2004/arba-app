@@ -103,3 +103,38 @@ export async function GET(req: Request) {
     return NextResponse.json({ message: "Gagal mengambil data", error: error.message }, { status: 500 });
   }
 }
+
+export async function PUT(req: Request) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    if (!token) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+
+    const decoded: any = jwt.verify(token, JWT_SECRET);
+    if (decoded.role !== "ADMIN" && decoded.role !== "PIMPINAN") {
+      return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
+    }
+
+    const { kode_mk, nama_mk, sks, nidn, hari, waktu, ruangan } = await req.json();
+
+    if (!kode_mk || !nama_mk || !sks) {
+      return NextResponse.json({ message: "Semua field wajib diisi (Kode, Nama, SKS)" }, { status: 400 });
+    }
+
+    const updated = await prisma.tb_mata_kuliah.update({
+      where: { kode_mk },
+      data: {
+        nama_mk,
+        sks: parseInt(sks),
+        nidn: nidn || null,
+        hari: hari || null,
+        waktu: waktu || null,
+        ruangan: ruangan || null
+      }
+    });
+
+    return NextResponse.json({ message: "Mata Kuliah berhasil diubah", data: updated }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ message: "Gagal mengubah", error: error.message }, { status: 500 });
+  }
+}

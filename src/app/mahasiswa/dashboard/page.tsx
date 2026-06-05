@@ -18,6 +18,7 @@ import {
   XCircle
 } from "lucide-react";
 import QRScanner from "@/components/QRScanner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 
 const TiltCard = ({
@@ -80,7 +81,6 @@ export default function MahasiswaDashboard() {
   const [geoStatus, setGeoStatus] = useState("Mengecek...");
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [mataKuliah, setMataKuliah] = useState([]);
-  const [ipkForm, setIpkForm] = useState("");
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => setMousePosition({ x: e.clientX, y: e.clientY });
@@ -92,7 +92,6 @@ export default function MahasiswaDashboard() {
       .then(data => {
         if(data.user) {
           setUserData(data.user);
-          if (data.user.mahasiswa?.ipk) setIpkForm(data.user.mahasiswa.ipk.toString());
         }
         setLoading(false);
       })
@@ -224,25 +223,7 @@ export default function MahasiswaDashboard() {
     }
   };
 
-  const handleUpdateIpk = async () => {
-    if (!ipkForm || isNaN(parseFloat(ipkForm))) return alert("Masukkan IPK yang valid");
-    try {
-      const res = await fetch("/api/mahasiswa/profil", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ipk: ipkForm })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert("IPK berhasil diperbarui");
-        window.location.reload();
-      } else {
-        alert(data.message);
-      }
-    } catch (e: any) {
-      alert("Error: " + e.message);
-    }
-  };
+
 
   const handleLogout = () => {
     document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
@@ -271,20 +252,20 @@ export default function MahasiswaDashboard() {
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-500/20 rounded-full blur-[120px]" />
       </motion.div>
 
-      {/* Sidebar / Topnav on Mobile */}
-      <aside className="w-full lg:w-64 lg:h-screen border-b lg:border-b-0 lg:border-r border-glass-border glass-panel z-20 flex flex-row lg:flex-col items-center lg:items-start py-4 lg:py-8 px-4 lg:px-0 lg:rounded-r-[40px] sticky top-0 overflow-x-auto gap-4 lg:gap-0">
-        <div className="flex items-center gap-3 lg:px-8 lg:mb-12 shrink-0">
-          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full dark:bg-white/5 bg-stone-100 dark:bg-white/5 p-1 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+      {/* Sidebar Desktop */}
+      <aside className="hidden lg:flex w-64 h-screen border-r border-glass-border glass-panel z-20 flex-col items-start rounded-r-[40px] sticky top-0">
+        {/* Desktop Header */}
+        <div className="flex items-center gap-3 p-8 pb-4 w-full">
+          <div className="w-12 h-12 rounded-full dark:bg-white/5 bg-stone-100 dark:bg-white/5 p-1 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)]">
             <img src="/logo-stikom.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
-          <div className="hidden lg:block">
+          <div>
             <h1 className="font-bold text-lg tracking-wider text-foreground dark:text-white">STIKOM</h1>
             <p className="text-xs text-stone-600 dark:text-stone-300 dark:text-zinc-400">22 Januari</p>
           </div>
         </div>
 
-        <nav className="flex-1 flex flex-row lg:flex-col gap-1 md:gap-2 lg:gap-4 lg:px-6 overflow-x-auto hide-scrollbar">
-
+        <nav className="flex-1 w-full flex flex-col gap-4 px-6 pt-8 overflow-y-auto hide-scrollbar">
           {[
             { icon: Home, label: "Dashboard" },
             { icon: ScanLine, label: "Absensi QR" },
@@ -305,16 +286,16 @@ export default function MahasiswaDashboard() {
                   setActiveTab(item.label);
                 }
               }}
-              className={`flex items-center gap-3 md:gap-4 px-3 md:px-4 py-3 md:py-4 rounded-2xl md:rounded-full transition-all duration-300 min-h-[48px] min-w-[48px] justify-center lg:justify-start shrink-0 ${
+              className={`flex items-center gap-4 px-4 py-4 rounded-full transition-all duration-300 justify-start shrink-0 ${
                 activeTab === item.label
                   ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 glow-amber"
-                  : "text-stone-600 dark:text-stone-300 dark:text-zinc-400 hover:text-foreground dark:text-white hover:dark:bg-white/5 bg-stone-100 dark:bg-white/5"
+                  : "text-stone-600 dark:text-stone-300 dark:text-zinc-400 hover:text-foreground dark:text-white hover:dark:bg-white/5 hover:bg-stone-100 dark:hover:bg-white/5"
               }`}
             >
-              <item.icon size={22} className={activeTab === item.label ? "text-amber-600 dark:text-amber-400" : ""} />
-              <span className="hidden lg:block font-medium text-sm">{item.label}</span>
+              <item.icon size={20} className={activeTab === item.label ? "text-amber-600 dark:text-amber-400" : ""} />
+              <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
               {activeTab === item.label && (
-                <motion.div layoutId="active-nav" className="hidden lg:block ml-auto">
+                <motion.div layoutId="active-nav-mhs" className="ml-auto">
                   <div className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_10px_#fbbf24]" />
                 </motion.div>
               )}
@@ -322,13 +303,68 @@ export default function MahasiswaDashboard() {
           ))}
         </nav>
 
-        <div className="lg:px-6 lg:mt-auto shrink-0">
-          <button onClick={handleLogout} className="flex items-center gap-2 lg:gap-4 px-4 py-3 lg:py-4 rounded-full text-stone-600 dark:text-stone-300 dark:text-zinc-400 hover:text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all duration-300 w-full">
+        <div className="flex px-6 mt-auto pb-8 w-full gap-2 items-center">
+          <ThemeToggle />
+          <button onClick={handleLogout} className="flex items-center gap-4 px-4 py-4 rounded-full text-stone-600 dark:text-stone-300 dark:text-zinc-400 hover:text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all duration-300 w-full">
             <LogOut size={20} />
-            <span className="hidden lg:block font-medium">Keluar</span>
+            <span className="font-medium">Keluar</span>
           </button>
         </div>
       </aside>
+
+      {/* Mobile Top Header */}
+      <div className="lg:hidden flex items-center justify-between p-4 glass-panel sticky top-0 z-40 border-b border-glass-border">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full dark:bg-white/5 bg-stone-100 dark:bg-white/5 p-1 flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+            <img src="/logo-stikom.png" alt="Logo" className="w-full h-full object-contain" />
+          </div>
+          <div>
+            <h1 className="font-bold text-base tracking-wider text-foreground dark:text-white">STIKOM</h1>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button onClick={handleLogout} className="p-2 text-stone-500 hover:text-red-500 bg-stone-100 dark:bg-white/5 rounded-xl">
+            <LogOut size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-glass-border z-50 px-2 py-2 flex justify-around items-center safe-area-pb">
+        {[
+          { icon: Home, label: "Dashboard" },
+          { icon: ScanLine, label: "Absensi QR" },
+          { icon: ClipboardList, label: "Evaluasi" },
+          { icon: Calendar, label: "Jadwal" },
+          { icon: User, label: "Profil" },
+        ].map((item, i) => (
+          <button
+            key={i}
+            onClick={() => {
+              if (item.label === "Absensi QR") {
+                if (geoStatus.includes("Luar") || geoStatus.includes("GPS") || geoStatus.includes("⚠️")) {
+                  alert("Akses ditolak! Anda berada di luar radius kampus (150m) atau GPS tidak aktif. Pastikan GPS menyala dan Anda berada di area kampus.");
+                  return;
+                }
+                setShowScanner(true);
+              } else {
+                setActiveTab(item.label);
+              }
+            }}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl min-w-[64px] transition-colors ${
+              activeTab === item.label
+                ? "text-amber-600 dark:text-amber-400"
+                : "text-stone-500 dark:text-stone-400"
+            }`}
+          >
+            <item.icon size={20} className={activeTab === item.label ? "drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" : ""} />
+            <span className="text-[10px] font-medium leading-none mt-1 max-w-[60px] truncate">
+              {item.label === "Absensi QR" ? "QR" : item.label}
+            </span>
+          </button>
+        ))}
+      </nav>
 
       {/* Main Content */}
       <main className="flex-1 p-4 lg:p-10 h-auto lg:h-screen overflow-y-auto z-10 pb-24 lg:pb-10">
@@ -372,8 +408,8 @@ export default function MahasiswaDashboard() {
                 
                 <div className="flex gap-8">
                   <div>
-                    <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400 mb-1">IPK Saat Ini</p>
-                    <p className="text-2xl font-bold text-foreground dark:text-white">{mhs?.ipk ? mhs.ipk.toFixed(2) : "0.00"}</p>
+                    <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400 mb-1">Semester</p>
+                    <p className="text-2xl font-bold text-foreground dark:text-white">{mhs?.semester?.nama_semester || "-"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400 mb-1">Kehadiran (Semester Ini)</p>
@@ -522,22 +558,7 @@ export default function MahasiswaDashboard() {
                           <p className="text-green-600 dark:text-green-400 font-medium">Terdaftar Aktif</p>
                        </div>
                     </div>
-                    <div className="mt-6 dark:bg-white/5 bg-stone-100 dark:bg-white/5 p-4 rounded-xl border dark:border-white/10 border-stone-200 dark:border-white/10 flex items-center justify-between">
-                       <div>
-                         <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400 mb-1">Perbarui IPK</p>
-                         <input 
-                           type="number" 
-                           step="0.01" 
-                           value={ipkForm} 
-                           onChange={(e) => setIpkForm(e.target.value)} 
-                           placeholder="Contoh: 3.85"
-                           className="dark:bg-stone-100 dark:bg-white/50 bg-stone-100 dark:bg-white/5 border border-amber-500/50 rounded-lg px-3 py-2 text-foreground dark:text-white w-32 focus:outline-none focus:border-amber-400"
-                         />
-                       </div>
-                       <button onClick={handleUpdateIpk} className="px-4 py-2 bg-amber-500 text-black font-bold rounded-xl hover:bg-amber-400 transition-colors">
-                         Simpan
-                       </button>
-                    </div>
+
                  </div>
               </div>
             </TiltCard>

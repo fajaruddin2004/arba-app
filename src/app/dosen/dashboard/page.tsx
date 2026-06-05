@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { QrCode, BookOpen, LogOut, ChevronRight, Users, CheckCircle2, Home, User, Calendar, ShieldCheck, MapPin, Clock } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useRouter } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 
 const TiltCard = ({
@@ -208,16 +209,18 @@ export default function DosenDashboard() {
         <div className="absolute inset-0 bg-[url('https://transparenttextures.com/patterns/cubes.png')] opacity-5 mix-blend-overlay"></div>
       </div>
 
-      <aside className="w-full md:w-[320px] lg:w-[340px] border-b md:border-b-0 md:border-r dark:border-white/5 border-stone-200 dark:border-white/5 p-6 flex flex-col h-auto md:h-full flex-shrink-0 bg-background/80 backdrop-blur-xl z-50">
-        <div className="mb-10 lg:mb-16 flex items-center gap-4 shrink-0">
+      <aside className="hidden md:flex w-[320px] lg:w-[340px] border-r dark:border-white/5 border-stone-200 flex-col h-full flex-shrink-0 bg-background/80 backdrop-blur-xl z-50">
+        {/* Desktop Header */}
+        <div className="flex items-center gap-3 p-6 pb-0">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-black font-black text-xl shadow-[0_0_20px_rgba(249,115,22,0.4)]">D</div>
           <div>
             <h2 className="text-xl font-black text-foreground dark:text-white tracking-tight">Portal Dosen</h2>
-            <p className="text-xs text-stone-500 dark:text-stone-400 dark:text-stone-500 mt-1 uppercase tracking-wider font-bold">STIKOM 22 Januari</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 uppercase tracking-wider font-bold">STIKOM 22 Januari</p>
           </div>
         </div>
         
-        <nav className="flex-1 flex flex-row lg:flex-col gap-1 md:gap-2 lg:gap-4 lg:px-6 overflow-x-auto hide-scrollbar">
+        {/* Desktop Navigation */}
+        <nav className="flex-1 flex flex-col gap-4 p-6 pt-12 overflow-y-auto hide-scrollbar">
           {[
             { icon: Home, label: "Dashboard" },
             { icon: QrCode, label: "Sesi Kelas" },
@@ -228,16 +231,16 @@ export default function DosenDashboard() {
             <button
               key={i}
               onClick={() => setActiveTab(item.label)}
-              className={`flex items-center gap-3 md:gap-4 px-3 md:px-4 py-3 md:py-4 rounded-2xl md:rounded-full transition-all duration-300 min-h-[48px] min-w-[48px] justify-center md:justify-start shrink-0 ${
+              className={`flex items-center gap-4 px-4 py-4 rounded-full transition-all duration-300 justify-start shrink-0 ${
                 activeTab === item.label
                   ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/30 glow-orange"
-                  : "text-stone-600 dark:text-stone-300 dark:text-zinc-400 hover:text-foreground dark:text-white hover:dark:bg-white/5 bg-stone-100 dark:bg-white/5"
+                  : "text-stone-600 dark:text-stone-300 hover:text-foreground dark:text-white hover:bg-stone-100 dark:hover:bg-white/5"
               }`}
             >
-              <item.icon size={22} className={activeTab === item.label ? "text-orange-600 dark:text-orange-400" : ""} />
-              <span className="hidden lg:block font-medium text-sm">{item.label}</span>
+              <item.icon size={20} className={activeTab === item.label ? "text-orange-600 dark:text-orange-400" : ""} />
+              <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
               {activeTab === item.label && (
-                <motion.div layoutId="active-nav-dosen" className="hidden lg:block ml-auto">
+                <motion.div layoutId="active-nav-dosen" className="ml-auto">
                   <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_10px_#f97316]" />
                 </motion.div>
               )}
@@ -245,15 +248,56 @@ export default function DosenDashboard() {
           ))}
         </nav>
 
-        <div className="lg:px-6 lg:mt-auto shrink-0 mt-4 md:mt-0">
-          <button onClick={handleLogout} className="flex items-center gap-2 lg:gap-4 px-4 py-3 lg:py-4 rounded-full text-stone-600 dark:text-stone-300 dark:text-zinc-400 hover:text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all duration-300 w-full min-h-[48px]">
-            <LogOut size={20} />
-            <span className="hidden lg:block font-medium">Keluar</span>
+        {/* Desktop Footer */}
+        <div className="flex shrink-0 p-6 pt-0 items-center gap-2 mt-auto">
+          <ThemeToggle />
+          <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-4 rounded-2xl text-stone-500 dark:text-stone-400 hover:text-red-500 hover:bg-red-500/10 transition-all w-full">
+            <LogOut size={20} /><span className="font-medium text-sm">Keluar</span>
           </button>
         </div>
       </aside>
 
-      <main className="flex-1 p-6 md:p-10 relative overflow-y-auto">
+      {/* Mobile Top Header */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-background/80 backdrop-blur-xl border-b dark:border-white/5 border-stone-200 sticky top-0 z-40">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-black font-black text-lg shadow-[0_0_15px_rgba(249,115,22,0.4)]">D</div>
+          <div>
+            <h2 className="text-base font-black text-foreground dark:text-white tracking-tight">Portal Dosen</h2>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button onClick={handleLogout} className="p-2 text-stone-500 hover:text-red-500 bg-stone-100 dark:bg-white/5 rounded-xl">
+            <LogOut size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t dark:border-white/5 border-stone-200 z-50 px-2 py-2 flex justify-around items-center safe-area-pb">
+        {[
+          { icon: Home, label: "Dashboard" },
+          { icon: QrCode, label: "Sesi Kelas" },
+          { icon: BookOpen, label: "Hasil Evaluasi" },
+          { icon: Calendar, label: "Jadwal" },
+          { icon: User, label: "Profil" },
+        ].map((item, i) => (
+          <button
+            key={i}
+            onClick={() => setActiveTab(item.label)}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl min-w-[64px] transition-colors ${
+              activeTab === item.label
+                ? "text-orange-600 dark:text-orange-400"
+                : "text-stone-500 dark:text-stone-400"
+            }`}
+          >
+            <item.icon size={20} className={activeTab === item.label ? "drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]" : ""} />
+            <span className="text-[10px] font-medium">{item.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      <main className="flex-1 p-6 md:p-10 relative overflow-y-auto pb-24 md:pb-10">
         <div className="max-w-7xl mx-auto space-y-10">
           
           <header className="flex flex-col-reverse md:flex-row justify-between items-start md:items-center gap-6 glass-panel p-6 rounded-3xl z-10 relative border dark:border-white/5 border-stone-200 dark:border-white/5">
@@ -355,7 +399,7 @@ export default function DosenDashboard() {
           {activeTab === "Sesi Kelas" && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10 animate-in fade-in zoom-in-95 duration-500">
               <TiltCard className="lg:col-span-5 h-full">
-                <div className="bg-[#0f0a07]/50 rounded-[2rem] p-4 text-center relative overflow-hidden h-full flex flex-col justify-center">
+                <div className="dark:bg-[#0f0a07]/50 bg-orange-500/5 rounded-[2rem] p-4 text-center relative overflow-hidden h-full flex flex-col justify-center">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-orange-600/10 rounded-full blur-[50px]"></div>
                   
                   <h3 className="text-2xl font-bold text-foreground dark:text-white mb-2 relative z-10">Manajemen Sesi Kelas</h3>
@@ -368,7 +412,7 @@ export default function DosenDashboard() {
                       <div className="text-left">
                         <label className="text-sm text-foreground/70 dark:text-stone-400 mb-2 block font-medium">Pilih Mata Kuliah</label>
                         <select 
-                          className="w-full bg-[#1a110b] border border-orange-500/30 text-foreground dark:text-white rounded-xl px-4 py-4 outline-none focus:border-orange-500 transition-colors"
+                          className="w-full bg-white dark:bg-[#1a110b] border border-orange-500/30 text-foreground dark:text-white rounded-xl px-4 py-4 outline-none focus:border-orange-500 transition-colors"
                           value={selectedMk}
                           onChange={(e) => setSelectedMk(e.target.value)}
                         >
@@ -401,14 +445,14 @@ export default function DosenDashboard() {
                       </button>
                       
                       <div className="grid grid-cols-2 gap-4 mt-8">
-                        <div className="bg-[#0f0a07] border dark:border-stone-800 border-stone-200 rounded-2xl p-4">
+                        <div className="dark:bg-[#0f0a07] bg-white border dark:border-stone-800 border-stone-200 rounded-2xl p-4">
                           <div className="flex items-center gap-3 text-orange-600 dark:text-orange-400 mb-2">
                             <Users size={16} />
                             <span className="font-bold text-xs uppercase">Hadir</span>
                           </div>
                           <p className="text-3xl font-black text-foreground dark:text-white">{history.length}</p>
                         </div>
-                        <div className="bg-[#0f0a07] border dark:border-stone-800 border-stone-200 rounded-2xl p-4">
+                        <div className="dark:bg-[#0f0a07] bg-white border dark:border-stone-800 border-stone-200 rounded-2xl p-4">
                           <div className="flex items-center gap-3 text-foreground/70 dark:text-stone-400 mb-2">
                             <CheckCircle2 size={16} />
                             <span className="font-bold text-xs uppercase">Status</span>
@@ -457,7 +501,7 @@ export default function DosenDashboard() {
                           value={manualNim} 
                           onChange={(e) => setManualNim(e.target.value)} 
                           placeholder="Masukkan NIM Mahasiswa" 
-                          className="flex-1 bg-[#1a110b] border border-orange-500/30 text-white rounded-xl px-4 py-3 outline-none focus:border-orange-500 transition-colors"
+                          className="flex-1 dark:bg-[#1a110b] bg-white border border-orange-500/30 text-foreground dark:text-white rounded-xl px-4 py-3 outline-none focus:border-orange-500 transition-colors"
                         />
                         <button 
                           onClick={handleManualAttendance} 
@@ -470,9 +514,9 @@ export default function DosenDashboard() {
                     </div>
                   </TiltCard>
                 ) : (
-                  <TiltCard className="bg-[#0f0a07] border dark:border-stone-800 border-stone-200 h-full min-h-[400px]">
+                  <TiltCard className="dark:bg-[#0f0a07] bg-white border dark:border-stone-800 border-stone-200 h-full min-h-[400px]">
                     <div className="flex flex-col items-center justify-center h-full text-center py-20">
-                       <BookOpen size={64} className="text-stone-800 mb-4" />
+                       <BookOpen size={64} className="text-stone-400 dark:text-stone-800 mb-4" />
                        <h3 className="text-xl font-bold text-foreground dark:text-white mb-2">Belum Ada Sesi Aktif</h3>
                        <p className="text-stone-500 dark:text-stone-400 dark:text-stone-500 font-medium max-w-md">Silakan pilih mata kuliah dan klik "Generate Barcode Sesi Baru" di sebelah kiri untuk membuka sesi absensi.</p>
                     </div>
