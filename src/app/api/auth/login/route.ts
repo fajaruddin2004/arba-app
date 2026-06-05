@@ -7,9 +7,9 @@ const JWT_SECRET = process.env.JWT_SECRET || "rahasia-stikom-22j";
 
 export async function POST(req: Request) {
   try {
-    const { username, password, role } = await req.json();
+    const { username, password } = await req.json();
 
-    if (!username || !password || !role) {
+    if (!username || !password) {
       return NextResponse.json({ message: "Missing fields" }, { status: 400 });
     }
 
@@ -19,15 +19,6 @@ export async function POST(req: Request) {
 
     if (!user) {
       return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
-    }
-
-    // Validasi Role
-    if (role === "ADMIN" || role === "PIMPINAN") {
-       if (user.role !== "ADMIN" && user.role !== "PIMPINAN") {
-          return NextResponse.json({ message: "Akses Ditolak: Bukan Admin" }, { status: 403 });
-       }
-    } else if (user.role !== role) {
-      return NextResponse.json({ message: "Role tidak sesuai" }, { status: 403 });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);

@@ -156,31 +156,64 @@ export default function DosenDashboard() {
     }
   };
 
+  const [manualNim, setManualNim] = useState("");
+  const [isManualLoading, setIsManualLoading] = useState(false);
+
+  const handleManualAttendance = async () => {
+    if (!manualNim || !activeSession) return;
+    setIsManualLoading(true);
+    
+    try {
+      const res = await fetch("/api/presensi/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nim: manualNim,
+          qr_token: activeSession.qr_token
+        })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert("Berhasil mengabsenkan mahasiswa!");
+        setManualNim("");
+        fetchActiveSession(); // Refresh list
+      } else {
+        alert(data.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan sistem");
+    } finally {
+      setIsManualLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
     router.push("/login");
   };
 
-  if (loading) return <div className="min-h-screen bg-[#050301] flex items-center justify-center text-orange-500">Memuat...</div>;
-  if (!userData || userData.role !== "DOSEN") return <div className="min-h-screen bg-[#050301] flex items-center justify-center text-red-500">Akses Ditolak</div>;
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center text-orange-500 transition-colors duration-300">Memuat...</div>;
+  if (!userData || userData.role !== "DOSEN") return <div className="min-h-screen bg-background flex items-center justify-center text-red-500">Akses Ditolak</div>;
 
   const dosen = userData.dosen;
   const history = activeSession?.presensi || [];
   
   return (
-    <div className="min-h-screen bg-[#050301] text-white flex flex-col md:flex-row font-sans selection:bg-orange-500/30 overflow-hidden relative">
+    <div className="min-h-screen bg-background text-foreground dark:text-white flex flex-col md:flex-row font-sans selection:bg-orange-500/30 overflow-hidden relative">
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-orange-600/10 blur-[100px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-amber-700/10 blur-[120px]" />
         <div className="absolute inset-0 bg-[url('https://transparenttextures.com/patterns/cubes.png')] opacity-5 mix-blend-overlay"></div>
       </div>
 
-      <aside className="w-full md:w-[320px] lg:w-[340px] border-b md:border-b-0 md:border-r border-white/5 p-6 flex flex-col h-auto md:h-screen sticky top-0 bg-[#050301]/80 backdrop-blur-xl z-50">
+      <aside className="w-full md:w-[320px] lg:w-[340px] border-b md:border-b-0 md:border-r dark:border-white/5 border-stone-200 dark:border-white/5 p-6 flex flex-col h-auto md:h-full flex-shrink-0 bg-background/80 backdrop-blur-xl z-50">
         <div className="mb-10 lg:mb-16 flex items-center gap-4 shrink-0">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-black font-black text-xl shadow-[0_0_20px_rgba(249,115,22,0.4)]">D</div>
           <div>
-            <h2 className="text-xl font-black text-white tracking-tight">Portal Dosen</h2>
-            <p className="text-xs text-stone-500 mt-1 uppercase tracking-wider font-bold">STIKOM 22 Januari</p>
+            <h2 className="text-xl font-black text-foreground dark:text-white tracking-tight">Portal Dosen</h2>
+            <p className="text-xs text-stone-500 dark:text-stone-400 dark:text-stone-500 mt-1 uppercase tracking-wider font-bold">STIKOM 22 Januari</p>
           </div>
         </div>
         
@@ -197,11 +230,11 @@ export default function DosenDashboard() {
               onClick={() => setActiveTab(item.label)}
               className={`flex items-center gap-3 md:gap-4 px-3 md:px-4 py-3 md:py-4 rounded-2xl md:rounded-full transition-all duration-300 min-h-[48px] min-w-[48px] justify-center md:justify-start shrink-0 ${
                 activeTab === item.label
-                  ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-400 border border-orange-500/30 glow-orange"
-                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  ? "bg-gradient-to-r from-orange-500/20 to-amber-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/30 glow-orange"
+                  : "text-stone-600 dark:text-stone-300 dark:text-zinc-400 hover:text-foreground dark:text-white hover:dark:bg-white/5 bg-stone-100 dark:bg-white/5"
               }`}
             >
-              <item.icon size={22} className={activeTab === item.label ? "text-orange-400" : ""} />
+              <item.icon size={22} className={activeTab === item.label ? "text-orange-600 dark:text-orange-400" : ""} />
               <span className="hidden lg:block font-medium text-sm">{item.label}</span>
               {activeTab === item.label && (
                 <motion.div layoutId="active-nav-dosen" className="hidden lg:block ml-auto">
@@ -213,7 +246,7 @@ export default function DosenDashboard() {
         </nav>
 
         <div className="lg:px-6 lg:mt-auto shrink-0 mt-4 md:mt-0">
-          <button onClick={handleLogout} className="flex items-center gap-2 lg:gap-4 px-4 py-3 lg:py-4 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-300 w-full min-h-[48px]">
+          <button onClick={handleLogout} className="flex items-center gap-2 lg:gap-4 px-4 py-3 lg:py-4 rounded-full text-stone-600 dark:text-stone-300 dark:text-zinc-400 hover:text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all duration-300 w-full min-h-[48px]">
             <LogOut size={20} />
             <span className="hidden lg:block font-medium">Keluar</span>
           </button>
@@ -223,17 +256,17 @@ export default function DosenDashboard() {
       <main className="flex-1 p-6 md:p-10 relative overflow-y-auto">
         <div className="max-w-7xl mx-auto space-y-10">
           
-          <header className="flex flex-col-reverse md:flex-row justify-between items-start md:items-center gap-6 glass-panel p-6 rounded-3xl z-10 relative border border-white/5">
+          <header className="flex flex-col-reverse md:flex-row justify-between items-start md:items-center gap-6 glass-panel p-6 rounded-3xl z-10 relative border dark:border-white/5 border-stone-200 dark:border-white/5">
             <div>
-              <h1 className="text-3xl md:text-4xl font-black text-white">Selamat Datang, {dosen.nama_dosen}</h1>
-              <p className="text-zinc-400 mt-2">NIDN: {dosen.nidn}</p>
+              <h1 className="text-3xl md:text-4xl font-black text-foreground dark:text-white">Selamat Datang, {dosen.nama_dosen}</h1>
+              <p className="text-stone-600 dark:text-stone-300 dark:text-zinc-400 mt-2">NIDN: {dosen.nidn}</p>
             </div>
             <div className="flex items-center gap-4">
-              <button className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-white relative">
+              <button className="w-12 h-12 rounded-full dark:bg-white/5 bg-stone-100 dark:bg-white/5 border dark:border-white/10 border-stone-200 dark:border-white/10 flex items-center justify-center hover:dark:bg-white/10 bg-black/10 transition-colors text-foreground dark:text-white relative">
                 <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-orange-500 glow-orange" />
                 <BookOpen size={20} />
               </button>
-              <div className="w-16 h-16 rounded-full bg-stone-900 border-2 border-orange-500 overflow-hidden shadow-[0_0_20px_rgba(249,115,22,0.4)]">
+              <div className="w-16 h-16 rounded-full dark:bg-stone-900 bg-stone-100 border-2 border-orange-500 overflow-hidden shadow-[0_0_20px_rgba(249,115,22,0.4)]">
                 <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${dosen.nama_dosen}`} alt="Profile" className="w-full h-full object-cover" />
               </div>
             </div>
@@ -245,26 +278,26 @@ export default function DosenDashboard() {
               <TiltCard className="md:col-span-2 bg-gradient-to-br from-white/5 to-white/0 border-l-4 border-l-orange-500">
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
                   <div>
-                    <div className="flex items-center gap-2 text-orange-400 mb-2">
+                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-2">
                       <ShieldCheck size={20} />
                       <span className="text-xs font-bold tracking-wider uppercase">Status Dosen</span>
                     </div>
-                    <h3 className="text-3xl font-bold text-white">Aktif Mengajar</h3>
+                    <h3 className="text-3xl font-bold text-foreground dark:text-white">Aktif Mengajar</h3>
                   </div>
                   <div className="glass-panel px-4 py-2 rounded-full flex items-center gap-2">
-                    <MapPin size={16} className="text-green-400" />
-                    <span className="text-sm text-zinc-300">Sistem Online</span>
+                    <MapPin size={16} className="text-green-600 dark:text-green-400" />
+                    <span className="text-sm text-foreground/80 dark:text-zinc-300">Sistem Online</span>
                   </div>
                 </div>
                 
                 <div className="flex gap-8">
                   <div>
-                    <p className="text-sm text-zinc-400 mb-1">Mata Kuliah Diampu</p>
-                    <p className="text-2xl font-bold text-white">{mataKuliahList.length} MK</p>
+                    <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400 mb-1">Mata Kuliah Diampu</p>
+                    <p className="text-2xl font-bold text-foreground dark:text-white">{mataKuliahList.length} MK</p>
                   </div>
                   <div>
-                    <p className="text-sm text-zinc-400 mb-1">Status Sesi Saat Ini</p>
-                    <p className={`text-2xl font-bold ${activeSession ? "text-green-400" : "text-stone-500"}`}>
+                    <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400 mb-1">Status Sesi Saat Ini</p>
+                    <p className={`text-2xl font-bold ${activeSession ? "text-green-600 dark:text-green-400" : "text-stone-500 dark:text-stone-400 dark:text-stone-500"}`}>
                       {activeSession ? "Sesi Terbuka" : "Tidak Ada"}
                     </p>
                   </div>
@@ -273,9 +306,9 @@ export default function DosenDashboard() {
 
               <TiltCard className="flex flex-col justify-center items-center text-center">
                 <Clock size={40} className="text-orange-500 mb-4 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
-                <h4 className="text-lg font-medium text-zinc-300">Waktu Sistem</h4>
-                <p className="text-2xl font-bold text-white mt-2">{new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</p>
-                <p className="text-amber-400 mt-1 font-medium">{new Date().toLocaleDateString("id-ID", { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                <h4 className="text-lg font-medium text-foreground/80 dark:text-zinc-300">Waktu Sistem</h4>
+                <p className="text-2xl font-bold text-foreground dark:text-white mt-2">{new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</p>
+                <p className="text-amber-600 dark:text-amber-400 mt-1 font-medium">{new Date().toLocaleDateString("id-ID", { weekday: 'long', day: 'numeric', month: 'long' })}</p>
               </TiltCard>
 
               <TiltCard 
@@ -284,12 +317,12 @@ export default function DosenDashboard() {
               >
                 <div className="flex justify-between items-center h-full">
                   <div className="space-y-3 md:space-y-4">
-                    <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center ${activeSession ? "bg-green-500/20 text-green-400 glow-green" : "bg-orange-500/20 text-orange-400 glow-orange"}`}>
+                    <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center ${activeSession ? "bg-green-500/20 text-green-600 dark:text-green-400 glow-green" : "bg-orange-500/20 text-orange-600 dark:text-orange-400 glow-orange"}`}>
                       <QrCode size={28} />
                     </div>
                     <div>
-                      <h3 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">{activeSession ? "Sesi Sedang Berjalan" : "Buka Sesi Absensi Baru"}</h3>
-                      <p className="text-zinc-400 max-w-sm text-sm md:text-base">
+                      <h3 className="text-xl md:text-2xl font-bold text-foreground dark:text-white mb-1 md:mb-2">{activeSession ? "Sesi Sedang Berjalan" : "Buka Sesi Absensi Baru"}</h3>
+                      <p className="text-stone-600 dark:text-stone-300 dark:text-zinc-400 max-w-sm text-sm md:text-base">
                         {activeSession ? `Mata Kuliah: ${activeSession.nama_mk}. Klik untuk melihat barcode dan kehadiran.` : "Pilih mata kuliah dan generate QR Code dinamis untuk discan mahasiswa."}
                       </p>
                     </div>
@@ -303,15 +336,15 @@ export default function DosenDashboard() {
               <TiltCard className="group border border-amber-500/20 hover:border-amber-500/50 bg-gradient-to-bl from-amber-500/10 to-transparent" onClick={() => setActiveTab("Hasil Evaluasi")}>
                 <div className="flex flex-col h-full justify-between">
                   <div>
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 mb-3 md:mb-4 glow-amber">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-3 md:mb-4 glow-amber">
                       <BookOpen size={28} />
                     </div>
-                    <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Lihat Hasil Evaluasi</h3>
-                    <p className="text-sm text-zinc-400">
+                    <h3 className="text-lg md:text-xl font-bold text-foreground dark:text-white mb-1 md:mb-2">Lihat Hasil Evaluasi</h3>
+                    <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400">
                       Cek penilaian kinerja Anda dari mahasiswa.
                     </p>
                   </div>
-                  <div className="mt-4 md:mt-6 flex items-center gap-2 text-amber-400 font-medium group-hover:translate-x-2 transition-transform">
+                  <div className="mt-4 md:mt-6 flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium group-hover:translate-x-2 transition-transform">
                     Buka Laporan <ChevronRight size={18} />
                   </div>
                 </div>
@@ -325,17 +358,17 @@ export default function DosenDashboard() {
                 <div className="bg-[#0f0a07]/50 rounded-[2rem] p-4 text-center relative overflow-hidden h-full flex flex-col justify-center">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-orange-600/10 rounded-full blur-[50px]"></div>
                   
-                  <h3 className="text-2xl font-bold text-white mb-2 relative z-10">Manajemen Sesi Kelas</h3>
-                  <p className="text-sm text-stone-400 mb-8 relative z-10">
+                  <h3 className="text-2xl font-bold text-foreground dark:text-white mb-2 relative z-10">Manajemen Sesi Kelas</h3>
+                  <p className="text-sm text-foreground/70 dark:text-stone-400 mb-8 relative z-10">
                     {activeSession ? `Sesi aktif: ${activeSession.nama_mk}. Sesi ini akan tertutup otomatis setelah 20 menit.` : "Silakan pilih mata kuliah untuk membuka sesi kehadiran baru."}
                   </p>
                   
                   {!activeSession ? (
                     <div className="space-y-4">
                       <div className="text-left">
-                        <label className="text-sm text-stone-400 mb-2 block font-medium">Pilih Mata Kuliah</label>
+                        <label className="text-sm text-foreground/70 dark:text-stone-400 mb-2 block font-medium">Pilih Mata Kuliah</label>
                         <select 
-                          className="w-full bg-[#1a110b] border border-orange-500/30 text-white rounded-xl px-4 py-4 outline-none focus:border-orange-500 transition-colors"
+                          className="w-full bg-[#1a110b] border border-orange-500/30 text-foreground dark:text-white rounded-xl px-4 py-4 outline-none focus:border-orange-500 transition-colors"
                           value={selectedMk}
                           onChange={(e) => setSelectedMk(e.target.value)}
                         >
@@ -368,15 +401,15 @@ export default function DosenDashboard() {
                       </button>
                       
                       <div className="grid grid-cols-2 gap-4 mt-8">
-                        <div className="bg-[#0f0a07] border border-stone-800 rounded-2xl p-4">
-                          <div className="flex items-center gap-3 text-orange-400 mb-2">
+                        <div className="bg-[#0f0a07] border dark:border-stone-800 border-stone-200 rounded-2xl p-4">
+                          <div className="flex items-center gap-3 text-orange-600 dark:text-orange-400 mb-2">
                             <Users size={16} />
                             <span className="font-bold text-xs uppercase">Hadir</span>
                           </div>
-                          <p className="text-3xl font-black text-white">{history.length}</p>
+                          <p className="text-3xl font-black text-foreground dark:text-white">{history.length}</p>
                         </div>
-                        <div className="bg-[#0f0a07] border border-stone-800 rounded-2xl p-4">
-                          <div className="flex items-center gap-3 text-stone-400 mb-2">
+                        <div className="bg-[#0f0a07] border dark:border-stone-800 border-stone-200 rounded-2xl p-4">
+                          <div className="flex items-center gap-3 text-foreground/70 dark:text-stone-400 mb-2">
                             <CheckCircle2 size={16} />
                             <span className="font-bold text-xs uppercase">Status</span>
                           </div>
@@ -392,11 +425,11 @@ export default function DosenDashboard() {
 
               <div className="lg:col-span-7">
                 {activeSession ? (
-                  <TiltCard className="bg-white/5 border border-white/10 shadow-[0_0_80px_rgba(255,255,255,0.05)] text-center h-full flex flex-col justify-center items-center py-12">
+                  <TiltCard className="dark:bg-white/5 bg-stone-100 dark:bg-white/5 border dark:border-white/10 border-stone-200 dark:border-white/10 shadow-[0_0_80px_rgba(255,255,255,0.05)] text-center h-full flex flex-col justify-center items-center py-12 relative overflow-hidden">
                     <div className="text-center mb-8">
-                      <h2 className="text-3xl font-black text-white">Scan Untuk Hadir</h2>
-                      <p className="text-orange-400 font-medium">Mata Kuliah: {activeSession.nama_mk}</p>
-                      <p className="text-xs text-zinc-500 mt-2">Dibuka: {new Date(activeSession.waktu_buka).toLocaleTimeString('id-ID')} (Sesi max 20 Menit)</p>
+                      <h2 className="text-3xl font-black text-foreground dark:text-white">Scan Untuk Hadir</h2>
+                      <p className="text-orange-600 dark:text-orange-400 font-medium">Mata Kuliah: {activeSession.nama_mk}</p>
+                      <p className="text-xs text-stone-500 dark:text-stone-400 dark:text-zinc-500 mt-2">Dibuka: {new Date(activeSession.waktu_buka).toLocaleTimeString('id-ID')} (Sesi max 20 Menit)</p>
                     </div>
                     <div className="p-6 bg-white border-8 border-stone-900 rounded-3xl shadow-2xl relative">
                       <div className="absolute -inset-4 bg-orange-500/20 blur-xl rounded-[3rem] -z-10 animate-pulse"></div>
@@ -409,17 +442,39 @@ export default function DosenDashboard() {
                         includeMargin={false}
                       />
                     </div>
-                    <div className="mt-8 flex items-center gap-3 text-white font-bold bg-green-500/20 border border-green-500/50 px-6 py-3 rounded-full glow-green">
+                    <div className="mt-8 flex items-center gap-3 text-foreground dark:text-white font-bold bg-green-500/20 border border-green-500/50 px-6 py-3 rounded-full glow-green">
                       <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]"></div>
                       Menerima Kehadiran Mahasiswa...
                     </div>
+                    
+                    {/* Manual Attendance Form */}
+                    <div className="mt-12 pt-8 border-t border-stone-200 dark:border-white/10 dark:border-white/10 w-full max-w-md">
+                      <h4 className="text-lg font-bold text-foreground dark:text-white mb-2">Absen Manual Mahasiswa</h4>
+                      <p className="text-xs text-stone-600 dark:text-stone-300 dark:text-stone-400 mb-4">Gunakan ini jika mahasiswa tidak memiliki/membawa smartphone.</p>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={manualNim} 
+                          onChange={(e) => setManualNim(e.target.value)} 
+                          placeholder="Masukkan NIM Mahasiswa" 
+                          className="flex-1 bg-[#1a110b] border border-orange-500/30 text-white rounded-xl px-4 py-3 outline-none focus:border-orange-500 transition-colors"
+                        />
+                        <button 
+                          onClick={handleManualAttendance} 
+                          disabled={isManualLoading || !manualNim}
+                          className="px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-black font-bold disabled:opacity-50 transition-colors"
+                        >
+                          {isManualLoading ? "..." : "Hadirkan"}
+                        </button>
+                      </div>
+                    </div>
                   </TiltCard>
                 ) : (
-                  <TiltCard className="bg-[#0f0a07] border border-stone-800 h-full min-h-[400px]">
+                  <TiltCard className="bg-[#0f0a07] border dark:border-stone-800 border-stone-200 h-full min-h-[400px]">
                     <div className="flex flex-col items-center justify-center h-full text-center py-20">
                        <BookOpen size={64} className="text-stone-800 mb-4" />
-                       <h3 className="text-xl font-bold text-white mb-2">Belum Ada Sesi Aktif</h3>
-                       <p className="text-stone-500 font-medium max-w-md">Silakan pilih mata kuliah dan klik "Generate Barcode Sesi Baru" di sebelah kiri untuk membuka sesi absensi.</p>
+                       <h3 className="text-xl font-bold text-foreground dark:text-white mb-2">Belum Ada Sesi Aktif</h3>
+                       <p className="text-stone-500 dark:text-stone-400 dark:text-stone-500 font-medium max-w-md">Silakan pilih mata kuliah dan klik "Generate Barcode Sesi Baru" di sebelah kiri untuk membuka sesi absensi.</p>
                     </div>
                   </TiltCard>
                 )}
@@ -429,20 +484,20 @@ export default function DosenDashboard() {
 
           {/* Tabel Mahasiswa Hadir saat Sesi Kelas Terbuka */}
           {activeTab === "Sesi Kelas" && activeSession && (
-             <TiltCard className="w-full relative z-10 border border-stone-800 animate-in fade-in zoom-in-95 duration-500 mt-8">
-               <h3 className="text-xl font-bold text-white mb-6">Mahasiswa Hadir - Sesi Ini</h3>
+             <TiltCard className="w-full relative z-10 border dark:border-stone-800 border-stone-200 animate-in fade-in zoom-in-95 duration-500 mt-8">
+               <h3 className="text-xl font-bold text-foreground dark:text-white mb-6">Mahasiswa Hadir - Sesi Ini</h3>
                
                {history.length > 0 ? (
                  <div className="space-y-4">
                    {history.map((item: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-[#0a0604] border border-stone-800 hover:border-orange-500/30 transition-colors">
+                      <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-background border dark:border-stone-800 border-stone-200 hover:border-orange-500/30 transition-colors">
                        <div className="flex items-center gap-4">
-                         <div className="w-10 h-10 rounded-lg bg-stone-900 border border-white/10 flex items-center justify-center text-stone-500 font-bold">
+                         <div className="w-10 h-10 rounded-lg dark:bg-stone-900 bg-stone-100 border dark:border-white/10 border-stone-200 dark:border-white/10 flex items-center justify-center text-stone-500 dark:text-stone-400 dark:text-stone-500 font-bold">
                            {item.nim.substring(0, 2)}
                          </div>
                          <div>
-                           <p className="font-bold text-white">{item.mahasiswa?.nama_mahasiswa || item.nim}</p>
-                           <p className="text-xs text-stone-400">NIM: {item.nim} • {new Date(item.waktu_absen).toLocaleString("id-ID")}</p>
+                           <p className="font-bold text-foreground dark:text-white">{item.mahasiswa?.nama_mahasiswa || item.nim}</p>
+                           <p className="text-xs text-foreground/70 dark:text-stone-400">NIM: {item.nim} • {new Date(item.waktu_absen).toLocaleString("id-ID")}</p>
                          </div>
                        </div>
                        <div className="px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20 glow-green">
@@ -454,7 +509,7 @@ export default function DosenDashboard() {
                ) : (
                  <div className="flex flex-col items-center justify-center text-center py-10">
                     <Users size={48} className="text-stone-800 mb-4" />
-                    <p className="text-stone-500 font-medium">Belum ada mahasiswa yang memindai barcode untuk sesi ini.</p>
+                    <p className="text-stone-500 dark:text-stone-400 dark:text-stone-500 font-medium">Belum ada mahasiswa yang memindai barcode untuk sesi ini.</p>
                  </div>
                )}
              </TiltCard>
@@ -463,54 +518,54 @@ export default function DosenDashboard() {
           {activeTab === "Hasil Evaluasi" && (
             <TiltCard className="w-full relative z-10 border border-orange-500/30 animate-in fade-in zoom-in-95 duration-500 p-10 flex flex-col items-center justify-center text-center min-h-[400px]">
                <BookOpen size={64} className="text-orange-500 mb-6 drop-shadow-[0_0_20px_rgba(249,115,22,0.4)]" />
-               <h2 className="text-3xl font-black text-white mb-4">Laporan Evaluasi Dosen</h2>
-               <p className="text-stone-400 max-w-lg mb-8 leading-relaxed">Data kuesioner dari mahasiswa untuk semester ini masih dalam proses rekapitulasi oleh sistem akademik. Laporan lengkap akan tersedia pada akhir masa pengisian KHS.</p>
-               <button onClick={() => setActiveTab("Dashboard")} className="px-6 py-3 rounded-full bg-stone-900 border border-stone-800 hover:border-orange-500/50 text-white font-bold transition-colors">
+               <h2 className="text-3xl font-black text-foreground dark:text-white mb-4">Laporan Evaluasi Dosen</h2>
+               <p className="text-foreground/70 dark:text-stone-400 max-w-lg mb-8 leading-relaxed">Data kuesioner dari mahasiswa untuk semester ini masih dalam proses rekapitulasi oleh sistem akademik. Laporan lengkap akan tersedia pada akhir masa pengisian KHS.</p>
+               <button onClick={() => setActiveTab("Dashboard")} className="px-6 py-3 rounded-full dark:bg-stone-900 bg-stone-100 border dark:border-stone-800 border-stone-200 hover:border-orange-500/50 text-foreground dark:text-white font-bold transition-colors">
                  Kembali ke Dashboard
                </button>
             </TiltCard>
           )}
 
           {activeTab === "Jadwal Mengajar" && (
-            <TiltCard className="w-full relative z-10 border border-stone-800 animate-in fade-in zoom-in-95 duration-500">
-               <h2 className="text-2xl font-bold text-white mb-6">Jadwal Mengajar Anda</h2>
+            <TiltCard className="w-full relative z-10 border dark:border-stone-800 border-stone-200 animate-in fade-in zoom-in-95 duration-500">
+               <h2 className="text-2xl font-bold text-foreground dark:text-white mb-6">Jadwal Mengajar Anda</h2>
                <div className="space-y-4">
                  {mataKuliahList.slice(0, 2).map((mk, i) => (
-                    <div key={i} className={`p-6 rounded-2xl bg-white/5 border-l-4 ${i===0?'border-l-orange-500':'border-l-amber-500'} flex justify-between items-center`}>
+                    <div key={i} className={`p-6 rounded-2xl dark:bg-white/5 bg-stone-100 dark:bg-white/5 border-l-4 ${i===0?'border-l-orange-500':'border-l-amber-500'} flex justify-between items-center`}>
                       <div>
-                        <h4 className="font-bold text-xl text-white">{mk.nama_mk}</h4>
-                        <p className="text-stone-400">Kode: {mk.kode_mk} • {mk.sks} SKS</p>
+                        <h4 className="font-bold text-xl text-foreground dark:text-white">{mk.nama_mk}</h4>
+                        <p className="text-foreground/70 dark:text-stone-400">Kode: {mk.kode_mk} • {mk.sks} SKS</p>
                       </div>
                       <div className="text-right hidden sm:block">
                          <p className={`font-bold ${i===0?'text-orange-500':'text-amber-500'}`}>{i===0?'13:30 - 15:00 WITA':'08:00 - 10:30 WITA'}</p>
-                         <p className="text-sm text-stone-400">Ruang Kelas {i===0?'A3':'Lab'}</p>
+                         <p className="text-sm text-foreground/70 dark:text-stone-400">Ruang Kelas {i===0?'A3':'Lab'}</p>
                       </div>
                     </div>
                  ))}
-                 {mataKuliahList.length === 0 && <p className="text-zinc-500">Belum ada jadwal.</p>}
+                 {mataKuliahList.length === 0 && <p className="text-stone-500 dark:text-stone-400 dark:text-zinc-500">Belum ada jadwal.</p>}
                </div>
             </TiltCard>
           )}
 
           {activeTab === "Profil" && (
-            <TiltCard className="w-full relative z-10 border border-stone-800 animate-in fade-in zoom-in-95 duration-500">
+            <TiltCard className="w-full relative z-10 border dark:border-stone-800 border-stone-200 animate-in fade-in zoom-in-95 duration-500">
               <div className="flex flex-col md:flex-row gap-10 items-center md:items-start p-4">
-                 <div className="w-32 h-32 rounded-full bg-stone-900 border-4 border-orange-500 overflow-hidden shadow-[0_0_30px_rgba(249,115,22,0.4)] shrink-0">
+                 <div className="w-32 h-32 rounded-full dark:bg-stone-900 bg-stone-100 border-4 border-orange-500 overflow-hidden shadow-[0_0_30px_rgba(249,115,22,0.4)] shrink-0">
                     <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${dosen?.nama_dosen}`} alt="Profile" className="w-full h-full object-cover" />
                  </div>
                  <div className="space-y-4 text-center md:text-left flex-1">
                     <div>
-                      <h2 className="text-4xl font-black text-white">{dosen?.nama_dosen}</h2>
+                      <h2 className="text-4xl font-black text-foreground dark:text-white">{dosen?.nama_dosen}</h2>
                       <p className="text-xl text-orange-500 font-medium mt-1">NIDN: {dosen?.nidn}</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                       <div className="bg-stone-900/50 p-4 rounded-xl border border-stone-800">
-                          <p className="text-xs text-stone-500 uppercase font-bold tracking-wider mb-1">Jabatan Fungsional</p>
-                          <p className="text-white font-medium">Lektor</p>
+                       <div className="dark:bg-stone-900 bg-stone-100/50 p-4 rounded-xl border dark:border-stone-800 border-stone-200">
+                          <p className="text-xs text-stone-500 dark:text-stone-400 dark:text-stone-500 uppercase font-bold tracking-wider mb-1">Jabatan Fungsional</p>
+                          <p className="text-foreground dark:text-white font-medium">Lektor</p>
                        </div>
-                       <div className="bg-stone-900/50 p-4 rounded-xl border border-stone-800">
-                          <p className="text-xs text-stone-500 uppercase font-bold tracking-wider mb-1">Status Dosen</p>
-                          <p className="text-green-400 font-medium">Aktif Mengajar</p>
+                       <div className="dark:bg-stone-900 bg-stone-100/50 p-4 rounded-xl border dark:border-stone-800 border-stone-200">
+                          <p className="text-xs text-stone-500 dark:text-stone-400 dark:text-stone-500 uppercase font-bold tracking-wider mb-1">Status Dosen</p>
+                          <p className="text-green-600 dark:text-green-400 font-medium">Aktif Mengajar</p>
                        </div>
                     </div>
                  </div>

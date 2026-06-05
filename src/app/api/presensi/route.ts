@@ -24,9 +24,28 @@ export async function POST(req: Request) {
     
     const { qr_token, lat_mhs, long_mhs, status } = await req.json();
 
-    if (!qr_token || !lat_mhs || !long_mhs || !status) {
+    if (!qr_token || lat_mhs === undefined || long_mhs === undefined) {
        return NextResponse.json({ message: "Data tidak lengkap" }, { status: 400 });
     }
+
+    // ========== VALIDASI GEOLOKASI DI SERVER ==========
+    // Koordinat STIKOM 22 Januari Kendari (Google Maps verified)
+    const kampusLat = -3.9987867;
+    const kampusLng = 122.5177898;
+    const radiusMaksimal = 150; // 150 meter (cukup besar untuk GPS di dalam gedung)
+
+    // Rumus Haversine (server-side, tidak bisa dimanipulasi mahasiswa)
+    const toRad = (x: number) => x * Math.PI / 180;
+    const dLat = toRad(kampusLat - lat_mhs);
+    const dLng = toRad(kampusLng - long_mhs);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(toRad(lat_mhs)) * Math.cos(toRad(kampusLat)) *
+              Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const jarak = Math.round(6371e3 * c); // Jarak dalam meter
+    
+    // Server yang menentukan status, BUKAN client
+    const statusPresensi = jarak <= radiusMaksimal ? "Hadir" : "Di Luar Radius";
 
     // Validate session via qr_token
     const sesi = await prisma.tb_sesi_kelas.findUnique({
@@ -69,7 +88,7 @@ export async function POST(req: Request) {
       }
     });
 
-    // Insert presensi linked to session
+    // Insert presensi linked to session (menggunakan status dari server, bukan client)
     const newPresensi = await prisma.tb_presensi.create({
       data: {
         nim,
@@ -79,11 +98,14 @@ export async function POST(req: Request) {
         kode_ruangan: mk?.ruangan || null,
         lat_mhs: lat_mhs.toString(),
         long_mhs: long_mhs.toString(),
-        status
+        status: statusPresensi  // Server-validated status
       }
     });
 
-    return NextResponse.json({ message: "Presensi berhasil dicatat!", data: newPresensi }, { status: 201 });
+    return NextResponse.json({ 
+      message: `Presensi berhasil dicatat! Status: ${statusPresensi} (Jarak: ${jarak}m)`, 
+      data: newPresensi 
+    }, { status: 201 });
 
   } catch (error: any) {
     console.error("Presensi error:", error);

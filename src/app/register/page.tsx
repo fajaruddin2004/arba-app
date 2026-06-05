@@ -11,7 +11,7 @@ export default function RegisterPage() {
     email: "",
     password: "",
     nim_nidn: "",
-    role: "MAHASISWA",
+    role: "DOSEN",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -81,7 +81,6 @@ export default function RegisterPage() {
               onChange={handleChange}
               className="w-full bg-[#0a0604] border border-stone-800 rounded-xl p-3 text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors"
             >
-              <option value="MAHASISWA">Mahasiswa</option>
               <option value="DOSEN">Dosen</option>
               <option value="ADMIN">Admin</option>
             </select>

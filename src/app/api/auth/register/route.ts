@@ -4,14 +4,18 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const { nama, email, password, role, nim_nidn } = await req.json();
+    const { nama, email, password, nim_nidn, role } = await req.json();
 
-    if (!email || !password || !role) {
+    if (!nama || !email || !password || !nim_nidn || !role) {
       return NextResponse.json({ message: "Missing fields" }, { status: 400 });
     }
 
+    if (role === "MAHASISWA") {
+      return NextResponse.json({ message: "Pendaftaran Mahasiswa hanya dapat dilakukan oleh Admin." }, { status: 403 });
+    }
+
     // Validasi NIM / NIDN / NIP
-    if (role === "MAHASISWA" || role === "DOSEN") {
+    if (role === "DOSEN") {
       if (!nim_nidn) {
         return NextResponse.json({ message: "NIM / NIDN wajib diisi" }, { status: 400 });
       }

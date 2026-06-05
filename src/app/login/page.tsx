@@ -9,7 +9,6 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    role: "MAHASISWA",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -72,22 +71,8 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
-            <label className="text-xs font-bold text-stone-400 uppercase tracking-wider">Pilih Akses</label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="w-full bg-[#0a0604] border border-stone-800 rounded-xl p-3 text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors"
-            >
-              <option value="MAHASISWA">Portal Mahasiswa</option>
-              <option value="DOSEN">Portal Dosen</option>
-              <option value="ADMIN">Portal Admin / Pimpinan</option>
-            </select>
-          </div>
-
-          <div className="space-y-1">
             <label className="text-xs font-bold text-stone-400 uppercase tracking-wider">
-              {formData.role === "MAHASISWA" ? "NIM / Email" : formData.role === "DOSEN" ? "NIDN / Email" : "Username / Email"}
+              NIM / NIDN / Username
             </label>
             <div className="relative">
               <Mail size={18} className="absolute left-3 top-3.5 text-stone-500" />
@@ -98,7 +83,7 @@ export default function LoginPage() {
                 value={formData.username} 
                 onChange={handleChange} 
                 className="w-full bg-[#0a0604] border border-stone-800 rounded-xl p-3 pl-10 text-white focus:border-amber-500 focus:outline-none transition-colors" 
-                placeholder={`Masukkan ${formData.role === "MAHASISWA" ? "NIM" : formData.role === "DOSEN" ? "NIDN" : "Username"} Anda...`} 
+                placeholder="Masukkan NIM / NIDN / Username Anda..." 
               />
             </div>
           </div>

@@ -108,57 +108,89 @@ export default function MahasiswaDashboard() {
         if(data.data) setMataKuliah(data.data);
       });
 
-    // Check Geolocation
+    // ========== GEOLOCATION FIX ==========
+    // Koordinat Asli STIKOM 22 Januari Kendari (dari Google Maps)
+    const kampusLat = -3.9987867;
+    const kampusLng = 122.5177898;
+    
+    // Radius toleransi diperbesar: 150 meter
+    // GPS di dalam gedung bisa melenceng 20-50m, jadi 150m cukup aman
+    const radiusMaksimal = 150;
+    
+    // Fungsi Haversine untuk menghitung jarak 2 titik GPS
+    const hitungJarak = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+      const R = 6371e3; // Radius bumi (meter)
+      const toRad = (x: number) => x * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return Math.round(R * c);
+    };
+
+    let watchId: number | null = null;
+
     if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
+      // Gunakan watchPosition agar GPS terus diperbarui (penting untuk akurasi di dalam gedung)
+      watchId = navigator.geolocation.watchPosition(
         (position) => {
           const mhsLat = position.coords.latitude;
           const mhsLng = position.coords.longitude;
+          const akurasi = Math.round(position.coords.accuracy); // Akurasi GPS dalam meter
           
-          // Koordinat Asli STIKOM 22 Januari Kendari
-          const kampusLat = -3.9987867;
-          const kampusLng = 122.5177898;
-          
-          // Radius toleransi dalam meter (misal: 50 meter dari titik tengah kampus)
-          const radiusMaksimal = 50;
-
-          // Rumus Haversine untuk menghitung jarak antara 2 titik GPS di bumi
-          const R = 6371e3; // Radius bumi dalam meter
-          const φ1 = mhsLat * Math.PI/180; // φ, λ dalam radian
-          const φ2 = kampusLat * Math.PI/180;
-          const Δφ = (kampusLat-mhsLat) * Math.PI/180;
-          const Δλ = (kampusLng-mhsLng) * Math.PI/180;
-
-          const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                    Math.cos(φ1) * Math.cos(φ2) *
-                    Math.sin(Δλ/2) * Math.sin(Δλ/2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-          const jarak = Math.round(R * c); // Jarak dalam meter
+          const jarak = hitungJarak(mhsLat, mhsLng, kampusLat, kampusLng);
           const isDalamRadius = jarak <= radiusMaksimal;
 
           if (isDalamRadius) {
-            setGeoStatus(`Dalam Kampus (Jarak: ${jarak}m)`);
+            setGeoStatus(`✅ Dalam Kampus (${jarak}m, akurasi ±${akurasi}m)`);
           } else {
-            setGeoStatus(`Luar Area (Jarak: ${jarak}m)`);
+            setGeoStatus(`❌ Luar Area (${jarak}m, akurasi ±${akurasi}m)`);
           }
           
-          // Simpan koordinat di window object agar bisa diakses saat scan
+          // Simpan koordinat terbaru
           (window as any).mhsCoords = {
             lat: mhsLat,
             lng: mhsLng,
+            jarak,
+            akurasi,
             status: isDalamRadius ? "Hadir" : "Di Luar Radius"
           };
         },
         (error) => {
-          setGeoStatus("GPS Mati / Ditolak");
-          (window as any).mhsCoords = { lat: 0, lng: 0, status: "Alpa (GPS Mati)" };
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              setGeoStatus("⚠️ Izin GPS ditolak");
+              break;
+            case error.POSITION_UNAVAILABLE:
+              setGeoStatus("⚠️ GPS tidak tersedia");
+              break;
+            case error.TIMEOUT:
+              setGeoStatus("⚠️ GPS timeout, coba lagi...");
+              break;
+            default:
+              setGeoStatus("⚠️ GPS Error");
+          }
+          (window as any).mhsCoords = { lat: 0, lng: 0, status: "Alpa (GPS Error)" };
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        { 
+          enableHighAccuracy: true,  // Paksa gunakan GPS hardware (bukan WiFi/tower)
+          timeout: 15000,            // Tunggu hingga 15 detik
+          maximumAge: 0              // Selalu minta posisi baru (tidak pakai cache)
+        }
       );
+    } else {
+      setGeoStatus("⚠️ Browser tidak mendukung GPS");
     }
 
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      // Bersihkan watchPosition saat komponen di-unmount
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
   }, []);
 
   const handleScanSuccess = async (text: string) => {
@@ -217,15 +249,15 @@ export default function MahasiswaDashboard() {
     window.location.href = "/login";
   };
 
-  if (loading) return <div className="min-h-screen bg-[#050301] flex items-center justify-center text-amber-500">Memuat...</div>;
-  if (!userData || userData.role !== "MAHASISWA") return <div className="min-h-screen bg-[#050301] flex items-center justify-center text-red-500">Akses Ditolak</div>;
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center text-amber-500 transition-colors duration-300">Memuat...</div>;
+  if (!userData || userData.role !== "MAHASISWA") return <div className="min-h-screen bg-background flex items-center justify-center text-red-500">Akses Ditolak</div>;
 
   const mhs = userData.mahasiswa;
   const history = mhs?.presensi || [];
 
 
   return (
-    <div className="min-h-screen bg-espresso text-foreground overflow-x-hidden relative flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden relative flex flex-col lg:flex-row">
       {/* Global Parallax Background */}
       <motion.div
         className="absolute inset-0 z-0 opacity-30 pointer-events-none"
@@ -242,12 +274,12 @@ export default function MahasiswaDashboard() {
       {/* Sidebar / Topnav on Mobile */}
       <aside className="w-full lg:w-64 lg:h-screen border-b lg:border-b-0 lg:border-r border-glass-border glass-panel z-20 flex flex-row lg:flex-col items-center lg:items-start py-4 lg:py-8 px-4 lg:px-0 lg:rounded-r-[40px] sticky top-0 overflow-x-auto gap-4 lg:gap-0">
         <div className="flex items-center gap-3 lg:px-8 lg:mb-12 shrink-0">
-          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white/5 p-1 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full dark:bg-white/5 bg-stone-100 dark:bg-white/5 p-1 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)]">
             <img src="/logo-stikom.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div className="hidden lg:block">
-            <h1 className="font-bold text-lg tracking-wider text-white">STIKOM</h1>
-            <p className="text-xs text-zinc-400">22 Januari</p>
+            <h1 className="font-bold text-lg tracking-wider text-foreground dark:text-white">STIKOM</h1>
+            <p className="text-xs text-stone-600 dark:text-stone-300 dark:text-zinc-400">22 Januari</p>
           </div>
         </div>
 
@@ -264,8 +296,8 @@ export default function MahasiswaDashboard() {
               key={i}
               onClick={() => {
                 if (item.label === "Absensi QR") {
-                  if (geoStatus.includes("Luar") || geoStatus.includes("Mati")) {
-                    alert("Akses ditolak! Anda berada di luar radius aman kampus (50m) atau GPS tidak aktif.");
+                  if (geoStatus.includes("Luar") || geoStatus.includes("GPS") || geoStatus.includes("⚠️")) {
+                    alert("Akses ditolak! Anda berada di luar radius kampus (150m) atau GPS tidak aktif. Pastikan GPS menyala dan Anda berada di area kampus.");
                     return;
                   }
                   setShowScanner(true);
@@ -275,11 +307,11 @@ export default function MahasiswaDashboard() {
               }}
               className={`flex items-center gap-3 md:gap-4 px-3 md:px-4 py-3 md:py-4 rounded-2xl md:rounded-full transition-all duration-300 min-h-[48px] min-w-[48px] justify-center lg:justify-start shrink-0 ${
                 activeTab === item.label
-                  ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 text-amber-400 border border-amber-500/30 glow-amber"
-                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  ? "bg-gradient-to-r from-amber-500/20 to-orange-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 glow-amber"
+                  : "text-stone-600 dark:text-stone-300 dark:text-zinc-400 hover:text-foreground dark:text-white hover:dark:bg-white/5 bg-stone-100 dark:bg-white/5"
               }`}
             >
-              <item.icon size={22} className={activeTab === item.label ? "text-amber-400" : ""} />
+              <item.icon size={22} className={activeTab === item.label ? "text-amber-600 dark:text-amber-400" : ""} />
               <span className="hidden lg:block font-medium text-sm">{item.label}</span>
               {activeTab === item.label && (
                 <motion.div layoutId="active-nav" className="hidden lg:block ml-auto">
@@ -291,7 +323,7 @@ export default function MahasiswaDashboard() {
         </nav>
 
         <div className="lg:px-6 lg:mt-auto shrink-0">
-          <button onClick={handleLogout} className="flex items-center gap-2 lg:gap-4 px-4 py-3 lg:py-4 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-300 w-full">
+          <button onClick={handleLogout} className="flex items-center gap-2 lg:gap-4 px-4 py-3 lg:py-4 rounded-full text-stone-600 dark:text-stone-300 dark:text-zinc-400 hover:text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all duration-300 w-full">
             <LogOut size={20} />
             <span className="hidden lg:block font-medium">Keluar</span>
           </button>
@@ -304,15 +336,15 @@ export default function MahasiswaDashboard() {
           {/* Header */}
           <header className="flex flex-col-reverse md:flex-row justify-between items-start md:items-center glass-panel rounded-3xl md:rounded-full px-6 py-4 gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-white">Halo, {mhs?.nama || "Mahasiswa"}!</h2>
-              <p className="text-sm text-zinc-400">NIM: {mhs?.nim || "-"}</p>
+              <h2 className="text-2xl font-bold text-foreground dark:text-white">Halo, {mhs?.nama || "Mahasiswa"}!</h2>
+              <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400">NIM: {mhs?.nim || "-"}</p>
             </div>
             <div className="flex items-center gap-4 w-full md:w-auto justify-end">
-              <button className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-zinc-300 hover:text-amber-400 transition-colors relative">
+              <button className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-foreground/80 dark:text-zinc-300 hover:text-amber-600 dark:text-amber-400 transition-colors relative">
                 <Bell size={20} />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full animate-pulse shadow-[0_0_10px_#ea580c]" />
               </button>
-              <div className="w-10 h-10 rounded-full bg-zinc-800 border-2 border-amber-500 overflow-hidden shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+              <div className="w-10 h-10 rounded-full dark:bg-zinc-800 bg-zinc-100 border-2 border-amber-500 overflow-hidden shadow-[0_0_15px_rgba(245,158,11,0.3)]">
                 <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${mhs?.nama}`} alt="Profile" />
               </div>
             </div>
@@ -326,26 +358,26 @@ export default function MahasiswaDashboard() {
               <TiltCard className="md:col-span-2 bg-gradient-to-br from-white/5 to-white/0 border-l-4 border-l-amber-500">
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
                   <div>
-                    <div className="flex items-center gap-2 text-amber-400 mb-2">
+                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
                       <ShieldCheck size={20} />
                       <span className="text-xs font-bold tracking-wider uppercase">Status Mahasiswa</span>
                     </div>
-                    <h3 className="text-3xl font-bold text-white">Aktif</h3>
+                    <h3 className="text-3xl font-bold text-foreground dark:text-white">Aktif</h3>
                   </div>
                   <div className="glass-panel px-4 py-2 rounded-full flex items-center gap-2">
-                    <MapPin size={16} className={geoStatus.includes("Dalam") ? "text-green-400" : "text-red-400"} />
-                    <span className="text-sm text-zinc-300">{geoStatus}</span>
+                    <MapPin size={16} className={geoStatus.includes("Dalam") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"} />
+                    <span className="text-sm text-foreground/80 dark:text-zinc-300">{geoStatus}</span>
                   </div>
                 </div>
                 
                 <div className="flex gap-8">
                   <div>
-                    <p className="text-sm text-zinc-400 mb-1">IPK Saat Ini</p>
-                    <p className="text-2xl font-bold text-white">{mhs?.ipk ? mhs.ipk.toFixed(2) : "0.00"}</p>
+                    <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400 mb-1">IPK Saat Ini</p>
+                    <p className="text-2xl font-bold text-foreground dark:text-white">{mhs?.ipk ? mhs.ipk.toFixed(2) : "0.00"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-zinc-400 mb-1">Kehadiran (Semester Ini)</p>
-                    <p className="text-2xl font-bold text-white">{history.length} Kali</p>
+                    <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400 mb-1">Kehadiran (Semester Ini)</p>
+                    <p className="text-2xl font-bold text-foreground dark:text-white">{history.length} Kali</p>
                   </div>
                 </div>
               </TiltCard>
@@ -353,10 +385,10 @@ export default function MahasiswaDashboard() {
               {/* Quick Time */}
               <TiltCard className="flex flex-col justify-center items-center text-center">
                 <Clock size={40} className="text-amber-500 mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
-                <h4 className="text-lg font-medium text-zinc-300">Mata Kuliah Tersedia</h4>
-                <p className="text-2xl font-bold text-white mt-2">{mataKuliah.length > 0 ? (mataKuliah[0] as any).nama_mk : "Belum Ada"}</p>
-                <p className="text-orange-400 mt-1 font-medium">{mataKuliah.length > 0 && (mataKuliah[0] as any).hari ? `${(mataKuliah[0] as any).hari}, ${(mataKuliah[0] as any).waktu}` : "-"}</p>
-                <p className="text-sm text-zinc-500 mt-1">{mataKuliah.length > 0 ? ((mataKuliah[0] as any).ruangan || "Ruangan Belum Ditentukan") : "-"}</p>
+                <h4 className="text-lg font-medium text-foreground/80 dark:text-zinc-300">Mata Kuliah Tersedia</h4>
+                <p className="text-2xl font-bold text-foreground dark:text-white mt-2">{mataKuliah.length > 0 ? (mataKuliah[0] as any).nama_mk : "Belum Ada"}</p>
+                <p className="text-orange-600 dark:text-orange-400 mt-1 font-medium">{mataKuliah.length > 0 && (mataKuliah[0] as any).hari ? `${(mataKuliah[0] as any).hari}, ${(mataKuliah[0] as any).waktu}` : "-"}</p>
+                <p className="text-sm text-stone-500 dark:text-stone-400 dark:text-zinc-500 mt-1">{mataKuliah.length > 0 ? ((mataKuliah[0] as any).ruangan || "Ruangan Belum Ditentukan") : "-"}</p>
               </TiltCard>
 
               {/* Scan Absensi Card - Main Action */}
@@ -372,12 +404,12 @@ export default function MahasiswaDashboard() {
               >
                 <div className="flex justify-between items-center h-full">
                   <div className="space-y-3 md:space-y-4">
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400 glow-amber">
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 glow-amber">
                       <ScanLine size={28} />
                     </div>
                     <div>
-                      <h3 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">Scan Absensi Baru</h3>
-                      <p className="text-zinc-400 max-w-sm text-sm md:text-base">
+                      <h3 className="text-xl md:text-2xl font-bold text-foreground dark:text-white mb-1 md:mb-2">Scan Absensi Baru</h3>
+                      <p className="text-stone-600 dark:text-stone-300 dark:text-zinc-400 max-w-sm text-sm md:text-base">
                         Lakukan scan QR Code pada layar dosen untuk mencatat kehadiran.
                       </p>
                     </div>
@@ -392,15 +424,15 @@ export default function MahasiswaDashboard() {
               <TiltCard className="group border border-orange-500/20 hover:border-orange-500/50 bg-gradient-to-bl from-orange-500/10 to-transparent" onClick={() => setActiveTab("Evaluasi")}>
                 <div className="flex flex-col h-full justify-between">
                   <div>
-                    <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-400 mb-3 md:mb-4 glow-orange">
+                    <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-600 dark:text-orange-400 mb-3 md:mb-4 glow-orange">
                       <ClipboardList size={28} />
                     </div>
-                    <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Evaluasi Dosen</h3>
-                    <p className="text-sm text-zinc-400">
+                    <h3 className="text-lg md:text-xl font-bold text-foreground dark:text-white mb-1 md:mb-2">Evaluasi Dosen</h3>
+                    <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400">
                       Isi kuesioner kinerja dosen untuk semester ini.
                     </p>
                   </div>
-                  <div className="mt-4 md:mt-6 flex items-center gap-2 text-orange-400 font-medium group-hover:translate-x-2 transition-transform">
+                  <div className="mt-4 md:mt-6 flex items-center gap-2 text-orange-600 dark:text-orange-400 font-medium group-hover:translate-x-2 transition-transform">
                     Mulai Evaluasi <ChevronRight size={18} />
                   </div>
                 </div>
@@ -410,26 +442,26 @@ export default function MahasiswaDashboard() {
 
           {activeTab === "Dashboard" && (
             <TiltCard className="md:col-span-3 mt-6">
-              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+              <h3 className="text-lg font-bold text-foreground dark:text-white mb-6 flex items-center gap-2">
                 <CheckCircle2 className="text-amber-500" size={20} />
                 Riwayat Absensi Terakhir
               </h3>
               <div className="space-y-4">
                 {history.length > 0 ? history.map((item: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                  <div key={i} className="flex items-center justify-between p-4 rounded-2xl dark:bg-white/5 bg-stone-100 dark:bg-white/5 border dark:border-white/5 border-stone-200 dark:border-white/5 hover:dark:bg-white/10 bg-black/10 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className={`w-2 h-2 rounded-full ${item.status === "Hadir" ? "bg-green-500 shadow-[0_0_10px_#22c55e]" : "bg-red-500 shadow-[0_0_10px_#ef4444]"}`} />
                       <div>
-                        <p className="font-bold text-white">{item.dosen?.nama_dosen || item.nidn}</p>
-                        <p className="text-xs text-zinc-400">{new Date(item.waktu_absen).toLocaleString("id-ID")}</p>
+                        <p className="font-bold text-foreground dark:text-white">{item.dosen?.nama_dosen || item.nidn}</p>
+                        <p className="text-xs text-stone-600 dark:text-stone-300 dark:text-zinc-400">{new Date(item.waktu_absen).toLocaleString("id-ID")}</p>
                       </div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium border ${item.status === "Hadir" ? "bg-green-500/20 text-green-400 border-green-500/20" : "bg-red-500/20 text-red-400 border-red-500/20"}`}>
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium border ${item.status === "Hadir" ? "bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/20" : "bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/20"}`}>
                       {item.status.toUpperCase()}
                     </div>
                   </div>
                 )) : (
-                  <div className="text-center py-6 text-stone-500">Belum ada riwayat absensi.</div>
+                  <div className="text-center py-6 text-stone-500 dark:text-stone-400 dark:text-stone-500">Belum ada riwayat absensi.</div>
                 )}
               </div>
             </TiltCard>
@@ -438,68 +470,68 @@ export default function MahasiswaDashboard() {
           {activeTab === "Evaluasi" && (
             <TiltCard className="w-full bg-gradient-to-br from-[#0a0604] to-[#050301] border border-orange-500/30 animate-in fade-in zoom-in-95 duration-500 p-10 flex flex-col items-center justify-center text-center min-h-[400px]">
               <ClipboardList size={64} className="text-stone-800 mb-6 drop-shadow-[0_0_20px_rgba(234,88,12,0.2)]" />
-              <h2 className="text-3xl font-black text-white mb-4">Sistem Evaluasi Dosen</h2>
-              <p className="text-stone-400 max-w-lg mb-8 leading-relaxed">Saat ini tidak ada kuesioner aktif yang wajib diisi. Silakan cek kembali pada akhir semester menjelang Ujian Akhir Semester (UAS).</p>
-              <button onClick={() => setActiveTab("Dashboard")} className="px-6 py-3 rounded-full bg-stone-900 border border-stone-800 hover:border-orange-500/50 text-white font-bold transition-colors">
+              <h2 className="text-3xl font-black text-foreground dark:text-white mb-4">Sistem Evaluasi Dosen</h2>
+              <p className="text-foreground/70 dark:text-stone-400 max-w-lg mb-8 leading-relaxed">Saat ini tidak ada kuesioner aktif yang wajib diisi. Silakan cek kembali pada akhir semester menjelang Ujian Akhir Semester (UAS).</p>
+              <button onClick={() => setActiveTab("Dashboard")} className="px-6 py-3 rounded-full dark:bg-stone-900 bg-stone-100 border dark:border-stone-800 border-stone-200 hover:border-orange-500/50 text-foreground dark:text-white font-bold transition-colors">
                 Kembali ke Dashboard
               </button>
             </TiltCard>
           )}
 
           {activeTab === "Jadwal" && (
-            <TiltCard className="w-full border border-stone-800 animate-in fade-in zoom-in-95 duration-500">
-               <h2 className="text-2xl font-bold text-white mb-6">Mata Kuliah Tersedia</h2>
+            <TiltCard className="w-full border dark:border-stone-800 border-stone-200 animate-in fade-in zoom-in-95 duration-500">
+               <h2 className="text-2xl font-bold text-foreground dark:text-white mb-6">Mata Kuliah Tersedia</h2>
                <div className="space-y-4">
                  {mataKuliah.length > 0 ? mataKuliah.map((mk: any, i: number) => (
-                   <div key={i} className="p-6 rounded-2xl bg-white/5 border-l-4 border-l-amber-500 flex justify-between items-center hover:bg-white/10 transition-colors">
+                   <div key={i} className="p-6 rounded-2xl dark:bg-white/5 bg-stone-100 dark:bg-white/5 border-l-4 border-l-amber-500 flex justify-between items-center hover:dark:bg-white/10 bg-black/10 transition-colors">
                       <div>
-                        <h4 className="font-bold text-xl text-white">{mk.nama_mk}</h4>
-                        <p className="text-stone-400 font-mono mt-1 text-sm">{mk.kode_mk} • {mk.sks} SKS</p>
-                        <p className="text-sm text-stone-500 mt-1">{mk.dosen?.nama_dosen || "Belum ada Dosen"}</p>
+                        <h4 className="font-bold text-xl text-foreground dark:text-white">{mk.nama_mk}</h4>
+                        <p className="text-foreground/70 dark:text-stone-400 font-mono mt-1 text-sm">{mk.kode_mk} • {mk.sks} SKS</p>
+                        <p className="text-sm text-stone-500 dark:text-stone-400 dark:text-stone-500 mt-1">{mk.dosen?.nama_dosen || "Belum ada Dosen"}</p>
                       </div>
                       <div className="text-right">
                          <p className="font-bold text-amber-500">{mk.hari ? `${mk.hari}, ${mk.waktu}` : "Jadwal Belum Ada"}</p>
-                         <p className="text-sm text-stone-400 mt-1">{mk.ruangan || "Ruangan Belum Ada"}</p>
+                         <p className="text-sm text-foreground/70 dark:text-stone-400 mt-1">{mk.ruangan || "Ruangan Belum Ada"}</p>
                       </div>
                    </div>
                  )) : (
-                   <div className="text-center py-6 text-stone-500">Belum ada data mata kuliah.</div>
+                   <div className="text-center py-6 text-stone-500 dark:text-stone-400 dark:text-stone-500">Belum ada data mata kuliah.</div>
                  )}
                </div>
             </TiltCard>
           )}
 
           {activeTab === "Profil" && (
-            <TiltCard className="w-full border border-stone-800 animate-in fade-in zoom-in-95 duration-500">
+            <TiltCard className="w-full border dark:border-stone-800 border-stone-200 animate-in fade-in zoom-in-95 duration-500">
               <div className="flex flex-col md:flex-row gap-10 items-center md:items-start p-4">
-                 <div className="w-32 h-32 rounded-full bg-stone-900 border-4 border-amber-500 overflow-hidden shadow-[0_0_30px_rgba(245,158,11,0.4)] shrink-0">
+                 <div className="w-32 h-32 rounded-full dark:bg-stone-900 bg-stone-100 border-4 border-amber-500 overflow-hidden shadow-[0_0_30px_rgba(245,158,11,0.4)] shrink-0">
                     <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${mhs?.nama_mahasiswa}`} alt="Profile" className="w-full h-full object-cover" />
                  </div>
                  <div className="space-y-4 text-center md:text-left flex-1">
                     <div>
-                      <h2 className="text-4xl font-black text-white">{mhs?.nama_mahasiswa}</h2>
+                      <h2 className="text-4xl font-black text-foreground dark:text-white">{mhs?.nama_mahasiswa}</h2>
                       <p className="text-xl text-amber-500 font-medium mt-1">NIM: {mhs?.nim}</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                       <div className="bg-stone-900/50 p-4 rounded-xl border border-stone-800">
-                          <p className="text-xs text-stone-500 uppercase font-bold tracking-wider mb-1">Program Studi</p>
-                          <p className="text-white font-medium">S1 Teknik Informatika</p>
+                       <div className="dark:bg-stone-900 bg-stone-100/50 p-4 rounded-xl border dark:border-stone-800 border-stone-200">
+                          <p className="text-xs text-stone-500 dark:text-stone-400 dark:text-stone-500 uppercase font-bold tracking-wider mb-1">Program Studi</p>
+                          <p className="text-foreground dark:text-white font-medium">S1 Sistem Informasi</p>
                        </div>
-                       <div className="bg-stone-900/50 p-4 rounded-xl border border-stone-800">
-                          <p className="text-xs text-stone-500 uppercase font-bold tracking-wider mb-1">Status Mahasiswa</p>
-                          <p className="text-green-400 font-medium">Terdaftar Aktif</p>
+                       <div className="dark:bg-stone-900 bg-stone-100/50 p-4 rounded-xl border dark:border-stone-800 border-stone-200">
+                          <p className="text-xs text-stone-500 dark:text-stone-400 dark:text-stone-500 uppercase font-bold tracking-wider mb-1">Status Mahasiswa</p>
+                          <p className="text-green-600 dark:text-green-400 font-medium">Terdaftar Aktif</p>
                        </div>
                     </div>
-                    <div className="mt-6 bg-white/5 p-4 rounded-xl border border-white/10 flex items-center justify-between">
+                    <div className="mt-6 dark:bg-white/5 bg-stone-100 dark:bg-white/5 p-4 rounded-xl border dark:border-white/10 border-stone-200 dark:border-white/10 flex items-center justify-between">
                        <div>
-                         <p className="text-sm text-zinc-400 mb-1">Perbarui IPK</p>
+                         <p className="text-sm text-stone-600 dark:text-stone-300 dark:text-zinc-400 mb-1">Perbarui IPK</p>
                          <input 
                            type="number" 
                            step="0.01" 
                            value={ipkForm} 
                            onChange={(e) => setIpkForm(e.target.value)} 
                            placeholder="Contoh: 3.85"
-                           className="bg-black/50 border border-amber-500/50 rounded-lg px-3 py-2 text-white w-32 focus:outline-none focus:border-amber-400"
+                           className="dark:bg-stone-100 dark:bg-white/50 bg-stone-100 dark:bg-white/5 border border-amber-500/50 rounded-lg px-3 py-2 text-foreground dark:text-white w-32 focus:outline-none focus:border-amber-400"
                          />
                        </div>
                        <button onClick={handleUpdateIpk} className="px-4 py-2 bg-amber-500 text-black font-bold rounded-xl hover:bg-amber-400 transition-colors">
@@ -515,11 +547,11 @@ export default function MahasiswaDashboard() {
 
       {/* Modal Scanner QR */}
       {showScanner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="bg-[#0a0502] border border-amber-500/30 rounded-3xl p-6 w-full max-w-md relative shadow-[0_0_50px_rgba(245,158,11,0.2)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center dark:bg-black/80 bg-black/20 backdrop-blur-md p-4">
+          <div className="bg-background border border-amber-500/30 rounded-3xl p-6 w-full max-w-md relative shadow-[0_0_50px_rgba(245,158,11,0.2)]">
             <button 
               onClick={() => setShowScanner(false)}
-              className="absolute top-3 right-3 w-10 h-10 flex items-center justify-center rounded-full bg-stone-800 text-stone-300 hover:text-white hover:bg-stone-700 active:scale-95 transition-all z-10"
+              className="absolute top-3 right-3 w-10 h-10 flex items-center justify-center rounded-full dark:bg-stone-800 bg-stone-200 text-foreground/80 dark:text-stone-300 hover:text-foreground dark:text-white hover:bg-stone-700 active:scale-95 transition-all z-10"
             >
               <XCircle size={24} />
             </button>
