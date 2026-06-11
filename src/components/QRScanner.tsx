@@ -38,8 +38,14 @@ export default function QRScanner({ onScanSuccess }: { onScanSuccess: (text: str
             if (hasScannedRef.current) return;
             hasScannedRef.current = true;
 
-            // Stop scanner immediately
-            html5Qrcode.stop().catch(() => {});
+            // Stop scanner immediately safely
+            try {
+              if (html5Qrcode.isScanning) {
+                html5Qrcode.stop().catch(() => {});
+              } else {
+                html5Qrcode.stop().catch(() => {});
+              }
+            } catch (e) {}
             onScanSuccess(decodedText);
           },
           () => {
@@ -70,7 +76,10 @@ export default function QRScanner({ onScanSuccess }: { onScanSuccess: (text: str
       isMounted = false;
       clearTimeout(timer);
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
+        try {
+          // Wrap in try-catch because html5-qrcode throws string synchronously if not scanning
+          scannerRef.current.stop().catch(() => {});
+        } catch (e) {}
         scannerRef.current = null;
       }
     };
