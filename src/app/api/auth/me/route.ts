@@ -29,18 +29,36 @@ export async function GET(req: Request) {
           select: {
             nim: true,
             nama_mahasiswa: true,
-            ipk: true,
+            id_jurusan: true,
+            foto_profil: true,
+            id_semester: true,
+            jurusan: {
+              select: {
+                nama_jurusan: true,
+                matkul: true
+              }
+            },
+            semester: {
+              select: {
+                nama_semester: true,
+                matkul: true
+              }
+            },
             presensi: {
               take: 5,
               orderBy: { waktu_absen: "desc" },
-              include: { dosen: { select: { nama_dosen: true } } }
+              include: { 
+                dosen: { select: { nama_dosen: true } },
+                mata_kuliah: { select: { nama_mk: true } }
+              }
             }
           }
         },
         dosen: {
           select: {
             nidn: true,
-            nama_dosen: true
+            nama_dosen: true,
+            foto_profil: true
           }
         }
       }

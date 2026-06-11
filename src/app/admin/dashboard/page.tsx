@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Home, Users, BookOpen, FileText, LogOut, Plus, Trash2, GraduationCap, Activity, TrendingUp, ChevronRight, X, Download, Edit, LayoutDashboard, Database } from "lucide-react";
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { Home, Users, BookOpen, FileText, LogOut, Plus, Trash2, GraduationCap, Activity, TrendingUp, ChevronRight, X, Download, Edit, LayoutDashboard, Database, MessageSquare, CheckCircle, ToggleLeft, ToggleRight } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const TiltCard = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => {
@@ -36,7 +36,7 @@ export default function AdminDashboard() {
   
   // Forms
   const [showAddMK, setShowAddMK] = useState(false);
-  const [mkForm, setMkForm] = useState({ kode_mk: "", nama_mk: "", sks: "", nidn: "", hari: "", waktu: "", ruangan: "" });
+  const [mkForm, setMkForm] = useState({ kode_mk: "", nama_mk: "", sks: "", nidn: "", hari: "", waktu: "", ruangan: "", id_jurusan: "", id_semester: "" });
   const [isEditMK, setIsEditMK] = useState(false);
 
   const [showAddMhs, setShowAddMhs] = useState(false);
@@ -49,6 +49,56 @@ export default function AdminDashboard() {
 
   const [jurusanForm, setJurusanForm] = useState({ id_jurusan: "", nama_jurusan: "" });
   const [semesterForm, setSemesterForm] = useState({ id_semester: "", nama_semester: "" });
+  const [selectedSemesterTab, setSelectedSemesterTab] = useState("Semua");
+  const [kuesionerForm, setKuesionerForm] = useState({ id_kuesioner: "", pertanyaan: "" });
+  const [ruanganForm, setRuanganForm] = useState({ kode_ruangan: "", nama_ruangan: "", isEdit: false, original_kode: "" });
+
+  const [absensiData, setAbsensiData] = useState<any[]>([]);
+  const [filterMK, setFilterMK] = useState("Semua");
+  const [filterSemesterAbsensi, setFilterSemesterAbsensi] = useState("Semua");
+  const [filterJurusanAbsensi, setFilterJurusanAbsensi] = useState("Semua");
+  const [filterWaktuAbsensi, setFilterWaktuAbsensi] = useState("Semua");
+  const [loadingAbsensi, setLoadingAbsensi] = useState(false);
+
+  const [laporanData, setLaporanData] = useState<any[]>([]);
+  const [laporanMK, setLaporanMK] = useState("Semua");
+  const [laporanSemester, setLaporanSemester] = useState("Semua");
+  const [laporanWaktu, setLaporanWaktu] = useState("Semua");
+  const [loadingLaporan, setLoadingLaporan] = useState(false);
+
+  const fetchAbsensi = async () => {
+    setLoadingAbsensi(true);
+    try {
+      const res = await fetch(`/api/admin/absensi?kode_mk=${filterMK}&id_semester=${filterSemesterAbsensi}&id_jurusan=${filterJurusanAbsensi}&waktu=${filterWaktuAbsensi}`);
+      const d = await res.json();
+      if (res.ok) setAbsensiData(d.presensi || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingAbsensi(false);
+    }
+  };
+
+  const fetchLaporan = async () => {
+    setLoadingLaporan(true);
+    try {
+      const res = await fetch(`/api/admin/absensi?kode_mk=${laporanMK}&id_semester=${laporanSemester}&waktu=${laporanWaktu}`);
+      const d = await res.json();
+      if (res.ok) setLaporanData(d.presensi || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingLaporan(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "Absensi") fetchAbsensi();
+  }, [activeTab, filterMK, filterSemesterAbsensi, filterJurusanAbsensi, filterWaktuAbsensi]);
+
+  useEffect(() => {
+    if (activeTab === "Laporan") fetchLaporan();
+  }, [activeTab, laporanMK, laporanSemester, laporanWaktu]);
 
   const fetchData = () => {
     fetch(`/api/admin/stats?t=${Date.now()}`)
@@ -65,7 +115,6 @@ export default function AdminDashboard() {
   useEffect(() => { fetchData(); }, []);
 
   const handleLogout = () => { document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT"; window.location.href = "/login"; };
-
   // --- MATA KULIAH ---
   const saveMK = async () => {
     setActionMsg("");
@@ -77,7 +126,7 @@ export default function AdminDashboard() {
     const d = await res.json();
     if (res.ok) { 
       setActionMsg(isEditMK ? "Berhasil diubah!" : "Berhasil ditambahkan!"); 
-      setMkForm({ kode_mk: "", nama_mk: "", sks: "", nidn: "", hari: "", waktu: "", ruangan: "" }); 
+      setMkForm({ kode_mk: "", nama_mk: "", sks: "", nidn: "", hari: "", waktu: "", ruangan: "", id_jurusan: "", id_semester: "" }); 
       setShowAddMK(false); 
       fetchData(); 
     } else setActionMsg(d.message);
@@ -90,7 +139,17 @@ export default function AdminDashboard() {
   };
 
   const openEditMK = (mk: any) => {
-    setMkForm({ kode_mk: mk.kode_mk, nama_mk: mk.nama_mk, sks: mk.sks.toString(), nidn: mk.dosen?.nidn || "", hari: mk.hari || "", waktu: mk.waktu || "", ruangan: mk.ruangan || "" });
+    setMkForm({ 
+      kode_mk: mk.kode_mk, 
+      nama_mk: mk.nama_mk, 
+      sks: mk.sks.toString(), 
+      nidn: mk.dosen?.nidn || "", 
+      hari: mk.hari || "", 
+      waktu: mk.waktu || "", 
+      ruangan: mk.ruangan || "",
+      id_jurusan: mk.id_jurusan?.toString() || "",
+      id_semester: mk.id_semester?.toString() || ""
+    });
     setIsEditMK(true);
     setShowAddMK(true);
   };
@@ -192,6 +251,74 @@ export default function AdminDashboard() {
     fetchData();
   };
 
+  // --- RUANGAN ---
+  const saveRuangan = async () => {
+    if (!ruanganForm.kode_ruangan || !ruanganForm.nama_ruangan) return alert("Isi kode dan nama ruangan");
+    const res = await fetch("/api/admin/ruangan", { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify(ruanganForm) 
+    });
+    if (res.ok) {
+      setRuanganForm({ kode_ruangan: "", nama_ruangan: "", isEdit: false, original_kode: "" });
+      fetchData();
+    } else {
+      const d = await res.json();
+      alert(d.message);
+    }
+  };
+
+  const deleteRuangan = async (kode: string) => {
+    if (!confirm("Hapus ruangan?")) return;
+    await fetch(`/api/admin/ruangan?kode_ruangan=${kode}`, { method: "DELETE" });
+    fetchData();
+  };
+
+  // --- KUESIONER ---
+  const saveKuesioner = async () => {
+    if (!kuesionerForm.pertanyaan) return alert("Isi pertanyaan");
+    const res = await fetch("/api/admin/kuesioner", { 
+      method: kuesionerForm.id_kuesioner ? "PUT" : "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify(kuesionerForm) 
+    });
+    if (res.ok) {
+      setKuesionerForm({ id_kuesioner: "", pertanyaan: "" });
+      fetchData();
+    } else {
+      const d = await res.json();
+      alert(d.message);
+    }
+  };
+
+  const deleteKuesioner = async (id: string) => {
+    if (!confirm("Hapus pertanyaan?")) return;
+    await fetch(`/api/admin/kuesioner?id=${id}`, { method: "DELETE" });
+    fetchData();
+  };
+
+  const toggleKuesioner = async (id: string) => {
+    await fetch("/api/admin/kuesioner", { 
+      method: "PUT", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify({ id_kuesioner: id, toggleStatus: true }) 
+    });
+    fetchData();
+  };
+
+  const bulkToggleKuesioner = async (status: "Y" | "N") => {
+    try {
+      const res = await fetch("/api/admin/kuesioner", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bulkToggle: status }),
+      });
+      if (res.ok) fetchData();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   if (!data) return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center text-amber-500">
       <p>{msg ? <span className="text-red-500 font-bold">{msg}</span> : "Memuat Dashboard..."}</p>
@@ -211,7 +338,9 @@ export default function AdminDashboard() {
     { icon: Users, label: "Data Mahasiswa" },
     { icon: GraduationCap, label: "Data Dosen" },
     { icon: BookOpen, label: "Mata Kuliah" },
+    { icon: CheckCircle, label: "Absensi" },
     { icon: Database, label: "Manajemen" },
+    { icon: MessageSquare, label: "Kuesioner" },
     { icon: FileText, label: "Laporan" },
   ];
 
@@ -225,7 +354,7 @@ export default function AdminDashboard() {
       {/* Sidebar Desktop */}
       <aside className="hidden md:flex w-[300px] border-r border-foreground/10 flex-col h-full flex-shrink-0 bg-background/80 backdrop-blur-xl z-50">
         <div className="flex items-center gap-3 p-6 pb-0">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-black font-black text-lg shadow-[0_0_20px_rgba(245,158,11,0.4)]">A</div>
+          <img src="/logo-stikom.png" alt="STIKOM Logo" className="w-11 h-11 object-contain drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]" />
           <div>
             <h2 className="text-lg font-black text-foreground">Admin Panel</h2>
             <p className="text-[10px] text-stone-500 dark:text-stone-400 uppercase tracking-widest font-bold">STIKOM 22 Januari</p>
@@ -251,7 +380,7 @@ export default function AdminDashboard() {
       {/* Mobile Top Header */}
       <div className="md:hidden flex items-center justify-between p-4 bg-background/80 backdrop-blur-xl border-b dark:border-white/5 border-stone-200 sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-black font-black text-lg shadow-[0_0_15px_rgba(245,158,11,0.4)]">A</div>
+          <img src="/logo-stikom.png" alt="STIKOM Logo" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
           <div><h2 className="text-base font-black text-foreground">Admin Panel</h2></div>
         </div>
         <div className="flex items-center gap-2">
@@ -281,8 +410,8 @@ export default function AdminDashboard() {
                 <h1 className="text-3xl md:text-4xl font-black">Dashboard <span className="text-amber-500">Admin</span></h1>
                 <p className="text-stone-600 dark:text-stone-300 mt-1">Pusat kontrol sistem absensi STIKOM 22 Januari Kendari.</p>
               </div>
-              <div className="flex items-center gap-3 dark:bg-white/5 bg-stone-100 dark:bg-white/5 p-2 pr-5 rounded-full border dark:border-white/10 border-stone-200 dark:border-white/10">
-                <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-black font-black">A</div>
+              <div className="flex items-center gap-3 dark:bg-white/5 bg-stone-100 p-2 pr-5 rounded-full border dark:border-white/10 border-stone-200">
+                <img src="/logo-stikom.png" alt="Admin" className="w-10 h-10 object-contain" />
                 <span className="font-bold text-sm">Administrator</span>
               </div>
             </header>
@@ -302,35 +431,85 @@ export default function AdminDashboard() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <TiltCard className="lg:col-span-2 border dark:border-white/5 border-stone-200 dark:border-white/5">
-                <div className="flex items-center justify-between mb-6"><h3 className="text-lg font-bold flex items-center gap-2"><TrendingUp size={20} className="text-amber-500" /> Grafik Kehadiran 7 Hari</h3></div>
-                <div className="h-[280px]">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                    <BarChart data={data.chartArray}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-                      <XAxis dataKey="name" stroke="#666" fontSize={12} />
-                      <YAxis stroke="#666" fontSize={12} />
-                      <Tooltip contentStyle={{ backgroundColor: "#0a0604", border: "1px solid #333", borderRadius: 12 }} />
-                      <Bar dataKey="hadir" fill="#f59e0b" radius={[8, 8, 0, 0]} name="Hadir" />
-                      <Bar dataKey="diluar" fill="#ef4444" radius={[8, 8, 0, 0]} name="Di Luar Radius" />
-                    </BarChart>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              
+              {/* Grafik Area Kehadiran 7 Hari */}
+              <TiltCard className="lg:col-span-2 border dark:border-white/5 border-stone-200 dark:bg-black/20">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    <TrendingUp size={20} className="text-amber-500" /> Tren Kehadiran Mingguan
+                  </h3>
+                </div>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={data.chartArray}>
+                      <defs>
+                        <linearGradient id="colorHadir" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorDiluar" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-white/5" vertical={false} />
+                      <XAxis dataKey="name" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: "#1c1917", color: "#fff", border: "none", borderRadius: 12, boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)" }} 
+                        itemStyle={{ color: "#fff" }}
+                      />
+                      <Area type="monotone" dataKey="hadir" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorHadir)" name="Hadir" activeDot={{ r: 6, fill: "#f59e0b", stroke: "#fff", strokeWidth: 2 }} />
+                      <Area type="monotone" dataKey="diluar" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorDiluar)" name="Di Luar Radius" activeDot={{ r: 6, fill: "#ef4444", stroke: "#fff", strokeWidth: 2 }} />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </TiltCard>
-              <TiltCard className="border dark:border-white/5 border-stone-200 dark:border-white/5">
-                <h3 className="text-lg font-bold mb-4">Rasio Kehadiran</h3>
-                <div className="h-[220px]">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                    <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value">
-                        {pieData.map((_, i) => <Cell key={i} fill={i === 0 ? "#22c55e" : "#ef4444"} />)}
-                      </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: "#0a0604", border: "1px solid #333", borderRadius: 12 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </TiltCard>
+
+              <div className="flex flex-col gap-6 lg:col-span-1 xl:col-span-1">
+                {/* Grafik Pie Rasio */}
+                <TiltCard className="border dark:border-white/5 border-stone-200 dark:bg-black/20 flex-1">
+                  <h3 className="text-lg font-bold mb-2">Rasio Presensi Keseluruhan</h3>
+                  <div className="h-[200px] relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="value" stroke="none">
+                          {pieData.map((_, i) => <Cell key={i} fill={i === 0 ? "#22c55e" : "#ef4444"} />)}
+                        </Pie>
+                        <Tooltip contentStyle={{ backgroundColor: "#1c1917", color: "#fff", border: "none", borderRadius: 12 }} itemStyle={{ color: "#fff" }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-3xl font-black">{data.totalPresensi}</span>
+                      <span className="text-xs text-stone-500 font-bold uppercase tracking-widest">Total</span>
+                    </div>
+                  </div>
+                </TiltCard>
+
+                {/* Grafik Bar Hari Ini */}
+                <TiltCard className="border dark:border-white/5 border-stone-200 dark:bg-black/20 flex-1">
+                  <h3 className="text-lg font-bold mb-2 flex items-center gap-2"><Activity size={18} className="text-green-500" /> Kehadiran Hari Ini</h3>
+                  <div className="mt-4">
+                    <div className="flex justify-between text-sm mb-1 font-medium">
+                      <span>Sudah Absen</span>
+                      <span className="font-bold text-green-500">{data.presensiHariIni} / {data.mhsCount}</span>
+                    </div>
+                    <div className="w-full bg-stone-200 dark:bg-stone-800 rounded-full h-3 mb-4 overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(100, (data.presensiHariIni / Math.max(1, data.mhsCount)) * 100)}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className="bg-gradient-to-r from-emerald-500 to-green-400 h-3 rounded-full"
+                      />
+                    </div>
+                    
+                    <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed mt-4">
+                      Ada <strong className="text-foreground">{data.mhsCount - data.presensiHariIni} mahasiswa</strong> yang belum melakukan absensi hari ini.
+                    </p>
+                  </div>
+                </TiltCard>
+              </div>
             </div>
           </>)}
 
@@ -374,6 +553,25 @@ export default function AdminDashboard() {
                 </TiltCard>
               )}
 
+              {/* Semester Tabs */}
+              <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+                <button 
+                  onClick={() => setSelectedSemesterTab("Semua")}
+                  className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${selectedSemesterTab === "Semua" ? "bg-amber-500 text-black" : "bg-stone-100 dark:bg-white/5 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-white/10"}`}
+                >
+                  Semua
+                </button>
+                {(data.semester || []).map((s: any) => (
+                  <button 
+                    key={s.id_semester}
+                    onClick={() => setSelectedSemesterTab(s.id_semester.toString())}
+                    className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${selectedSemesterTab === s.id_semester.toString() ? "bg-amber-500 text-black" : "bg-stone-100 dark:bg-white/5 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-white/10"}`}
+                  >
+                    {s.nama_semester}
+                  </button>
+                ))}
+              </div>
+
               <TiltCard className="border border-stone-200 dark:border-white/5 bg-white dark:bg-transparent">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -381,7 +579,7 @@ export default function AdminDashboard() {
                       <th className="pb-3 font-medium">NIM</th><th className="pb-3 font-medium">Nama Lengkap</th><th className="pb-3 font-medium">JK</th><th className="pb-3 font-medium">Jurusan</th><th className="pb-3 font-medium">Semester</th><th className="pb-3 font-medium">Presensi</th><th className="pb-3 font-medium">Aksi</th>
                     </tr></thead>
                     <tbody>
-                      {(data.mahasiswa || []).map((m: any, i: number) => (
+                      {(data.mahasiswa || []).filter((m: any) => selectedSemesterTab === "Semua" || m.id_semester?.toString() === selectedSemesterTab).map((m: any, i: number) => (
                         <tr key={i} className="border-b border-stone-200 dark:border-white/5 hover:bg-stone-50 dark:hover:bg-white/5 transition-colors">
                           <td className="py-4 font-mono font-bold text-stone-800 dark:text-amber-400">{m.nim}</td>
                           <td className="py-4 font-bold text-stone-900 dark:text-white">{m.nama_mahasiswa}</td>
@@ -397,7 +595,7 @@ export default function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
-                  {(!data.mahasiswa || data.mahasiswa.length === 0) && <p className="text-center py-8 text-stone-500 dark:text-stone-400">Belum ada mahasiswa terdaftar.</p>}
+                  {(!data.mahasiswa || data.mahasiswa.filter((m: any) => selectedSemesterTab === "Semua" || m.id_semester?.toString() === selectedSemesterTab).length === 0) && <p className="text-center py-8 text-stone-500 dark:text-stone-400">Belum ada mahasiswa terdaftar untuk filter ini.</p>}
                 </div>
               </TiltCard>
             </div>
@@ -459,7 +657,7 @@ export default function AdminDashboard() {
           {activeTab === "Manajemen" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
               <h1 className="text-3xl font-black">Manajemen <span className="text-emerald-500">Akademik</span></h1>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {/* Tabel Jurusan */}
                 <TiltCard className="border border-stone-200 dark:border-white/5 bg-white dark:bg-transparent">
                   <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Database className="text-emerald-500" size={20} /> Data Jurusan</h3>
@@ -507,6 +705,169 @@ export default function AdminDashboard() {
                     </table>
                   </div>
                 </TiltCard>
+
+                {/* Tabel Ruangan */}
+                <TiltCard className="border border-stone-200 dark:border-white/5 bg-white dark:bg-transparent">
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Database className="text-emerald-500" size={20} /> Data Ruangan</h3>
+                  <div className="flex flex-col gap-2 mb-4">
+                    <input disabled={ruanganForm.isEdit} value={ruanganForm.kode_ruangan} onChange={e => setRuanganForm({...ruanganForm, kode_ruangan: e.target.value})} placeholder="Kode Ruang (cth: R101)" className="w-full border dark:border-white/10 dark:bg-black/50 p-2 rounded-xl text-sm disabled:opacity-50" />
+                    <div className="flex gap-2">
+                      <input value={ruanganForm.nama_ruangan} onChange={e => setRuanganForm({...ruanganForm, nama_ruangan: e.target.value})} placeholder="Nama Ruang (cth: Lab Komputer)" className="flex-1 border dark:border-white/10 dark:bg-black/50 p-2 rounded-xl text-sm" />
+                      <button onClick={saveRuangan} className="bg-emerald-500 text-black px-4 py-2 rounded-xl font-bold hover:bg-emerald-400">{ruanganForm.isEdit ? "Ubah" : "Tambah"}</button>
+                    </div>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {(data.ruangan || []).map((r: any) => (
+                          <tr key={r.kode_ruangan} className="border-b dark:border-white/5 border-stone-200">
+                            <td className="py-2">
+                              <div className="font-bold">{r.kode_ruangan}</div>
+                              <div className="text-xs text-stone-500 dark:text-stone-400">{r.nama_ruangan}</div>
+                            </td>
+                            <td className="py-2 text-right whitespace-nowrap">
+                              <button onClick={() => setRuanganForm({ kode_ruangan: r.kode_ruangan, nama_ruangan: r.nama_ruangan, isEdit: true, original_kode: r.kode_ruangan })} className="text-blue-500 p-1 mx-1"><Edit size={14}/></button>
+                              <button onClick={() => deleteRuangan(r.kode_ruangan)} className="text-red-500 p-1"><Trash2 size={14}/></button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </TiltCard>
+              </div>
+            </div>
+          )}
+
+          {/* ===== TAB: KUESIONER ===== */}
+          {activeTab === "Kuesioner" && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+              <div>
+                <h1 className="text-3xl font-black">Evaluasi <span className="text-purple-500">Dosen</span></h1>
+                <p className="text-stone-500 dark:text-stone-400 mt-2 max-w-2xl text-sm leading-relaxed">
+                  Kelola daftar pertanyaan yang akan ditampilkan kepada mahasiswa pada akhir semester. Pertanyaan ini digunakan untuk mengevaluasi kinerja dosen pengajar.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Form Tambah/Edit Pertanyaan */}
+                <TiltCard className="lg:col-span-1 border-t-4 border-t-purple-500 border-x border-b border-stone-200 dark:border-white/5 bg-white dark:bg-black/20 h-fit sticky top-6 shadow-sm">
+                  <h3 className="font-bold mb-4 flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                    <MessageSquare size={18} /> 
+                    {kuesionerForm.id_kuesioner ? "Edit Pertanyaan" : "Buat Pertanyaan Baru"}
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase mb-2 block">Teks Pertanyaan</label>
+                      <textarea 
+                        rows={4}
+                        value={kuesionerForm.pertanyaan} 
+                        onChange={e => setKuesionerForm({...kuesionerForm, pertanyaan: e.target.value})} 
+                        placeholder="Contoh: Seberapa jelas dosen dalam menyampaikan materi perkuliahan?" 
+                        className="w-full border border-stone-200 dark:border-white/10 dark:bg-black/50 bg-stone-50 p-4 rounded-xl text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none resize-none transition-all" 
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={saveKuesioner} 
+                        className="flex-1 bg-purple-500 text-white px-4 py-3 rounded-xl font-bold hover:bg-purple-600 shadow-[0_0_20px_rgba(168,85,247,0.2)] transition-all flex justify-center items-center gap-2"
+                      >
+                        {kuesionerForm.id_kuesioner ? <><Edit size={16}/> Simpan</> : <><Plus size={16}/> Tambah</>}
+                      </button>
+                      
+                      {kuesionerForm.id_kuesioner && (
+                        <button 
+                          onClick={() => setKuesionerForm({id_kuesioner: "", pertanyaan: ""})}
+                          className="px-4 py-3 bg-stone-100 dark:bg-white/5 text-stone-600 dark:text-stone-300 font-bold rounded-xl hover:bg-stone-200 dark:hover:bg-white/10 transition-colors"
+                        >
+                          Batal
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </TiltCard>
+
+                {/* Daftar Pertanyaan */}
+                <div className="lg:col-span-2 space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 px-1 gap-4">
+                    <h3 className="font-bold text-stone-700 dark:text-stone-300 flex items-center gap-2">
+                      Bank Pertanyaan 
+                      <span className="bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300 text-xs px-2 py-0.5 rounded-full">
+                        {(data.kuesioner || []).length} Total
+                      </span>
+                    </h3>
+                    
+                    <div className="flex gap-2">
+                      <button onClick={() => bulkToggleKuesioner("Y")} className="text-xs px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                        <CheckCircle size={14} /> Aktifkan Semua
+                      </button>
+                      <button onClick={() => bulkToggleKuesioner("N")} className="text-xs px-3 py-2 bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                        <X size={14} /> Non-Aktifkan Semua
+                      </button>
+                    </div>
+                  </div>
+
+                  {(data.kuesioner || []).map((k: any, index: number) => (
+                    <TiltCard 
+                      key={k.id_kuesioner} 
+                      className={`relative overflow-hidden transition-all duration-300 p-5 ${k.status_aktif === "Y" ? "border-l-4 border-l-purple-500 bg-white dark:bg-black/30 border border-stone-200 dark:border-white/5 shadow-sm" : "border border-stone-200 dark:border-white/5 bg-stone-50 dark:bg-white/5 opacity-75 grayscale-[30%]"}`}
+                    >
+                      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
+                        <div className="flex gap-4 flex-1">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0 ${k.status_aktif === "Y" ? "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300" : "bg-stone-200 text-stone-500 dark:bg-stone-800 dark:text-stone-400"}`}>
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className={`font-medium text-base ${k.status_aktif === "Y" ? "text-stone-800 dark:text-stone-100" : "text-stone-500 dark:text-stone-400 line-through decoration-stone-300 dark:decoration-stone-600"}`}>
+                              {k.pertanyaan}
+                            </p>
+                            
+                            <div className="flex items-center gap-2 mt-3">
+                              <span className={`text-[10px] font-black tracking-wider px-2 py-1 rounded-md uppercase ${k.status_aktif === "Y" ? "bg-purple-500 text-white shadow-sm" : "bg-stone-200 dark:bg-stone-800 text-stone-500"}`}>
+                                {k.status_aktif === "Y" ? "AKTIF" : "NON-AKTIF"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-1 w-full sm:w-auto justify-end border-t sm:border-t-0 border-stone-100 dark:border-white/5 pt-3 sm:pt-0 mt-3 sm:mt-0">
+                          <button 
+                            onClick={() => toggleKuesioner(k.id_kuesioner.toString())} 
+                            className={`p-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${k.status_aktif === "Y" ? "text-stone-500 hover:bg-stone-100 dark:hover:bg-white/10" : "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"}`}
+                            title={k.status_aktif === "Y" ? "Non-Aktifkan" : "Aktifkan"}
+                          >
+                            {k.status_aktif === "Y" ? <ToggleRight size={22} className="text-purple-500"/> : <ToggleLeft size={22} className="text-stone-400"/>}
+                          </button>
+                          <button 
+                            onClick={() => setKuesionerForm({ id_kuesioner: k.id_kuesioner.toString(), pertanyaan: k.pertanyaan })} 
+                            className="p-2 text-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit size={18}/>
+                          </button>
+                          <button 
+                            onClick={() => deleteKuesioner(k.id_kuesioner.toString())} 
+                            className="p-2 text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                            title="Hapus"
+                          >
+                            <Trash2 size={18}/>
+                          </button>
+                        </div>
+                      </div>
+                    </TiltCard>
+                  ))}
+                  
+                  {(!data.kuesioner || data.kuesioner.length === 0) && (
+                    <div className="text-center py-12 px-4 border-2 border-dashed border-stone-200 dark:border-white/10 rounded-2xl bg-stone-50 dark:bg-white/5">
+                      <MessageSquare size={40} className="mx-auto text-stone-300 dark:text-stone-600 mb-4" />
+                      <h4 className="text-lg font-bold text-stone-600 dark:text-stone-300 mb-2">Belum Ada Pertanyaan</h4>
+                      <p className="text-sm text-stone-500">Silakan buat pertanyaan kuesioner pertama Anda melalui form di samping.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -516,7 +877,7 @@ export default function AdminDashboard() {
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h1 className="text-3xl font-black">Mata <span className="text-blue-500">Kuliah</span></h1>
-                <button onClick={() => { setIsEditMK(false); setMkForm({ kode_mk: "", nama_mk: "", sks: "", nidn: "", hari: "", waktu: "", ruangan: "" }); setShowAddMK(true); }} className="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-black font-bold flex items-center gap-2 hover:scale-105 transition-transform shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+                <button onClick={() => { setIsEditMK(false); setMkForm({ kode_mk: "", nama_mk: "", sks: "", nidn: "", hari: "", waktu: "", ruangan: "", id_jurusan: "", id_semester: "" }); setShowAddMK(true); }} className="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-black font-bold flex items-center gap-2 hover:scale-105 transition-transform shadow-[0_0_20px_rgba(245,158,11,0.3)]">
                   <Plus size={18} /> Tambah MK
                 </button>
               </div>
@@ -537,12 +898,41 @@ export default function AdminDashboard() {
                       <option value="">Pilih Dosen Pengampu (Opsional)</option>
                       {(data.dosen || []).map((d: any) => <option key={d.nidn} value={d.nidn}>{d.nama_dosen}</option>)}
                     </select>
+
+                    <select value={mkForm.id_jurusan} onChange={e => setMkForm({ ...mkForm, id_jurusan: e.target.value })} className="dark:bg-stone-100 dark:bg-black/50 bg-white border dark:border-white/10 border-stone-200 dark:border-white/10 rounded-xl p-3 text-stone-600 dark:text-stone-300 focus:border-blue-500 focus:outline-none">
+                      <option value="">Pilih Jurusan (Opsional)</option>
+                      {(data.jurusan || []).map((j: any) => <option key={j.id_jurusan} value={j.id_jurusan}>{j.nama_jurusan}</option>)}
+                    </select>
+
+                    <select value={mkForm.id_semester} onChange={e => setMkForm({ ...mkForm, id_semester: e.target.value })} className="dark:bg-stone-100 dark:bg-black/50 bg-white border dark:border-white/10 border-stone-200 dark:border-white/10 rounded-xl p-3 text-stone-600 dark:text-stone-300 focus:border-blue-500 focus:outline-none">
+                      <option value="">Pilih Semester (Opsional)</option>
+                      {(data.semester || []).map((s: any) => <option key={s.id_semester} value={s.id_semester}>{s.nama_semester}</option>)}
+                    </select>
+
                     <select value={mkForm.hari} onChange={e => setMkForm({ ...mkForm, hari: e.target.value })} className="dark:bg-stone-100 dark:bg-black/50 bg-white border dark:border-white/10 border-stone-200 dark:border-white/10 rounded-xl p-3 text-stone-600 dark:text-stone-300 focus:border-blue-500 focus:outline-none">
                       <option value="">Pilih Hari (Opsional)</option>
                       {["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"].map((h) => <option key={h} value={h}>{h}</option>)}
                     </select>
-                    <input value={mkForm.waktu} onChange={e => setMkForm({ ...mkForm, waktu: e.target.value })} placeholder="Waktu (cth: 10:00 - 12:30)" className="dark:bg-stone-100 dark:bg-black/50 bg-white border dark:border-white/10 border-stone-200 dark:border-white/10 rounded-xl p-3 text-foreground focus:border-blue-500 focus:outline-none" />
-                    <input value={mkForm.ruangan} onChange={e => setMkForm({ ...mkForm, ruangan: e.target.value })} placeholder="Ruangan (cth: Lab Komputer 1)" className="dark:bg-stone-100 dark:bg-black/50 bg-white border dark:border-white/10 border-stone-200 dark:border-white/10 rounded-xl p-3 text-foreground focus:border-blue-500 focus:outline-none" />
+                    <input 
+                      type="text" 
+                      placeholder="Waktu (cth: 10:00 - 12:30)"
+                      value={mkForm.waktu} 
+                      onChange={e => {
+                        let val = e.target.value.replace(/\D/g, "");
+                        let formatted = val;
+                        if (val.length > 4) {
+                          formatted = `${val.slice(0,2)}:${val.slice(2,4)} - ${val.slice(4,6)}${val.length > 6 ? ':' + val.slice(6,8) : ''}`;
+                        } else if (val.length > 2) {
+                          formatted = `${val.slice(0,2)}:${val.slice(2,4)}`;
+                        }
+                        setMkForm({ ...mkForm, waktu: formatted });
+                      }} 
+                      className="dark:bg-stone-100 dark:bg-black/50 bg-white border dark:border-white/10 border-stone-200 dark:border-white/10 rounded-xl p-3 text-foreground focus:border-blue-500 focus:outline-none transition-colors" 
+                    />
+                    <select value={mkForm.ruangan} onChange={e => setMkForm({ ...mkForm, ruangan: e.target.value })} className="dark:bg-stone-100 dark:bg-black/50 bg-white border dark:border-white/10 border-stone-200 dark:border-white/10 rounded-xl p-3 text-stone-600 dark:text-stone-300 focus:border-blue-500 focus:outline-none">
+                      <option value="">Pilih Ruangan (Opsional)</option>
+                      {(data.ruangan || []).map((r: any) => <option key={r.kode_ruangan} value={r.kode_ruangan}>{r.nama_ruangan} ({r.kode_ruangan})</option>)}
+                    </select>
                   </div>
                   <button onClick={saveMK} className="mt-4 px-6 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 transition-colors">Simpan MK</button>
                 </TiltCard>
@@ -552,7 +942,7 @@ export default function AdminDashboard() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="text-left text-stone-500 dark:text-stone-400 border-b dark:border-white/5 border-stone-200 dark:border-white/5">
-                      <th className="pb-3 font-medium">Kode</th><th className="pb-3 font-medium">Nama MK</th><th className="pb-3 font-medium">SKS</th><th className="pb-3 font-medium">Dosen</th><th className="pb-3 font-medium">Jadwal & Ruang</th><th className="pb-3 font-medium">Aksi</th>
+                      <th className="pb-3 font-medium">Kode</th><th className="pb-3 font-medium">Nama MK</th><th className="pb-3 font-medium">SKS</th><th className="pb-3 font-medium">Jurusan & Smt</th><th className="pb-3 font-medium">Dosen</th><th className="pb-3 font-medium">Jadwal & Ruang</th><th className="pb-3 font-medium">Aksi</th>
                     </tr></thead>
                     <tbody>
                       {(data.mataKuliah || []).map((mk: any, i: number) => (
@@ -560,6 +950,9 @@ export default function AdminDashboard() {
                           <td className="py-4 font-mono text-blue-600 dark:text-blue-400 font-bold">{mk.kode_mk}</td>
                           <td className="py-4 font-bold">{mk.nama_mk}</td>
                           <td className="py-4 text-stone-600 dark:text-stone-300">{mk.sks} SKS</td>
+                          <td className="py-4 text-stone-500 dark:text-stone-400 text-xs">
+                            {mk.jurusan?.nama_jurusan || "-"}<br/>{mk.semester?.nama_semester || "-"}
+                          </td>
                           <td className="py-4 text-stone-600 dark:text-stone-300">{mk.dosen?.nama_dosen || <span className="text-zinc-600 italic">Belum ditentukan</span>}</td>
                           <td className="py-4 text-stone-600 dark:text-stone-300 text-xs">
                             {mk.hari ? `${mk.hari}, ${mk.waktu} (${mk.ruangan})` : <span className="text-zinc-600 italic">-</span>}
@@ -578,6 +971,117 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* ===== TAB: ABSENSI ===== */}
+          {activeTab === "Absensi" && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h1 className="text-3xl font-black">Data <span className="text-teal-500">Absensi</span></h1>
+              </div>
+
+              {/* Filter Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-white dark:bg-black/20 border border-stone-200 dark:border-white/5 p-6 rounded-3xl shadow-sm">
+                <div>
+                  <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase mb-2 block">Jurusan</label>
+                  <select value={filterJurusanAbsensi} onChange={e => setFilterJurusanAbsensi(e.target.value)} className="w-full dark:bg-stone-100 dark:bg-black/50 bg-stone-50 border border-stone-300 dark:border-white/10 rounded-xl p-3 text-sm focus:border-teal-500 focus:outline-none">
+                    <option value="Semua">Semua Jurusan</option>
+                    {(data.jurusan || []).map((j: any) => <option key={j.id_jurusan} value={j.id_jurusan.toString()}>{j.nama_jurusan}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase mb-2 block">Semester</label>
+                  <select value={filterSemesterAbsensi} onChange={e => setFilterSemesterAbsensi(e.target.value)} className="w-full dark:bg-stone-100 dark:bg-black/50 bg-stone-50 border border-stone-300 dark:border-white/10 rounded-xl p-3 text-sm focus:border-teal-500 focus:outline-none">
+                    <option value="Semua">Semua Semester</option>
+                    {(data.semester || []).map((s: any) => <option key={s.id_semester} value={s.id_semester.toString()}>{s.nama_semester}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase mb-2 block">Mata Kuliah</label>
+                  <select value={filterMK} onChange={e => setFilterMK(e.target.value)} className="w-full dark:bg-stone-100 dark:bg-black/50 bg-stone-50 border border-stone-300 dark:border-white/10 rounded-xl p-3 text-sm focus:border-teal-500 focus:outline-none">
+                    <option value="Semua">Semua Mata Kuliah</option>
+                    {(data.mataKuliah || []).map((mk: any) => <option key={mk.kode_mk} value={mk.kode_mk}>{mk.nama_mk}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase mb-2 block">Waktu</label>
+                  <select value={filterWaktuAbsensi} onChange={e => setFilterWaktuAbsensi(e.target.value)} className="w-full dark:bg-stone-100 dark:bg-black/50 bg-stone-50 border border-stone-300 dark:border-white/10 rounded-xl p-3 text-sm focus:border-teal-500 focus:outline-none">
+                    <option value="Semua">Semua Waktu</option>
+                    <option value="hari_ini">Hari Ini</option>
+                    <option value="minggu_ini">Minggu Ini</option>
+                    <option value="bulan_ini">Bulan Ini</option>
+                    <option value="tahun_ini">Tahun Ini</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Tabel Data (kiri) */}
+                <div className="lg:w-3/4">
+                  <TiltCard className="border border-stone-200 dark:border-white/5 bg-white dark:bg-transparent h-full">
+                    {loadingAbsensi ? (
+                      <p className="text-center py-8 text-stone-500">Memuat data absensi...</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="text-left text-stone-600 dark:text-stone-400 border-b border-stone-200 dark:border-white/5">
+                            <th className="pb-3 font-medium">Waktu</th>
+                            <th className="pb-3 font-medium">Mahasiswa</th>
+                            <th className="pb-3 font-medium">MK</th>
+                            <th className="pb-3 font-medium">Semester</th>
+                            <th className="pb-3 font-medium">Status</th>
+                          </tr></thead>
+                          <tbody>
+                            {absensiData.map((p: any, i: number) => (
+                              <tr key={i} className="border-b border-stone-200 dark:border-white/5 hover:bg-stone-50 dark:hover:bg-white/5 transition-colors">
+                                <td className="py-4 whitespace-nowrap">{new Date(p.waktu_absen).toLocaleString('id-ID')}</td>
+                                <td className="py-4">
+                                  <div className="font-bold">{p.mahasiswa?.nama_mahasiswa || "-"}</div>
+                                  <div className="text-xs text-stone-500">{p.nim}</div>
+                                </td>
+                                <td className="py-4">
+                                  <div className="font-bold">{p.mata_kuliah?.nama_mk || "-"}</div>
+                                  <div className="text-xs text-stone-500">{p.kode_mk || "-"}</div>
+                                </td>
+                                <td className="py-4">{p.mahasiswa?.semester?.nama_semester || "-"}</td>
+                                <td className="py-4">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${p.status === "Hadir" ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>
+                                    {p.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {absensiData.length === 0 && <p className="text-center py-8 text-stone-500">Belum ada data absensi untuk filter ini.</p>}
+                      </div>
+                    )}
+                  </TiltCard>
+                </div>
+
+                {/* Kalkulasi Summary (kanan) */}
+                <div className="lg:w-1/4">
+                  <div className="sticky top-6 flex flex-col gap-4">
+                    <TiltCard className="border-l-4 border-l-teal-500 border border-stone-200 dark:border-white/5 bg-gradient-to-br from-white to-teal-50/30 dark:from-black/40 dark:to-teal-900/10 shadow-sm">
+                      <h3 className="text-sm font-bold text-stone-500 dark:text-stone-400 mb-1">Total Keseluruhan</h3>
+                      <p className="text-4xl font-black text-teal-600 dark:text-teal-400">{absensiData.length}</p>
+                      <p className="text-xs text-stone-400 mt-2">Berdasarkan filter aktif</p>
+                    </TiltCard>
+                    
+                    <TiltCard className="border-l-4 border-l-green-500 border border-stone-200 dark:border-white/5 bg-gradient-to-br from-white to-green-50/30 dark:from-black/40 dark:to-green-900/10 shadow-sm">
+                      <h3 className="text-sm font-bold text-stone-500 dark:text-stone-400 mb-1">Mahasiswa Hadir</h3>
+                      <p className="text-3xl font-black text-green-600 dark:text-green-400">{absensiData.filter(p => p.status === "Hadir").length}</p>
+                    </TiltCard>
+
+                    <TiltCard className="border-l-4 border-l-red-500 border border-stone-200 dark:border-white/5 bg-gradient-to-br from-white to-red-50/30 dark:from-black/40 dark:to-red-900/10 shadow-sm">
+                      <h3 className="text-sm font-bold text-stone-500 dark:text-stone-400 mb-1">Tidak Hadir</h3>
+                      <p className="text-3xl font-black text-red-600 dark:text-red-400">{absensiData.filter(p => p.status !== "Hadir").length}</p>
+                      <p className="text-xs text-stone-400 mt-2">Termasuk Izin/Sakit/Alfa</p>
+                    </TiltCard>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ===== TAB: LAPORAN ===== */}
           {activeTab === "Laporan" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
@@ -588,46 +1092,107 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              <TiltCard className="border dark:border-white/5 border-stone-200 dark:border-white/5 print:shadow-none">
-                <div className="text-center mb-8 border-b dark:border-white/10 border-stone-200 dark:border-white/10 pb-6">
-                  <h2 className="text-2xl font-black text-amber-500">STIKOM 22 JANUARI KENDARI</h2>
-                  <p className="text-stone-600 dark:text-stone-300 mt-1">Laporan Rekapitulasi Presensi Mahasiswa</p>
-                  <p className="text-stone-500 dark:text-stone-400 text-sm mt-1">Dicetak pada: {new Date().toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+              {/* Filter Section (Hidden during print) */}
+              <div className="print:hidden grid grid-cols-1 md:grid-cols-3 gap-4 bg-white dark:bg-black/20 border border-stone-200 dark:border-white/5 p-6 rounded-3xl shadow-sm">
+                <div>
+                  <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase mb-2 block">Mata Kuliah</label>
+                  <select value={laporanMK} onChange={e => setLaporanMK(e.target.value)} className="w-full dark:bg-stone-100 dark:bg-black/50 bg-stone-50 border border-stone-300 dark:border-white/10 rounded-xl p-3 text-sm focus:border-green-500 focus:outline-none">
+                    <option value="Semua">Semua Mata Kuliah</option>
+                    {(data.mataKuliah || []).map((mk: any) => <option key={mk.kode_mk} value={mk.kode_mk}>{mk.nama_mk} ({mk.kode_mk})</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase mb-2 block">Semester</label>
+                  <select value={laporanSemester} onChange={e => setLaporanSemester(e.target.value)} className="w-full dark:bg-stone-100 dark:bg-black/50 bg-stone-50 border border-stone-300 dark:border-white/10 rounded-xl p-3 text-sm focus:border-green-500 focus:outline-none">
+                    <option value="Semua">Semua Semester</option>
+                    {(data.semester || []).map((s: any) => <option key={s.id_semester} value={s.id_semester.toString()}>{s.nama_semester}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase mb-2 block">Waktu</label>
+                  <select value={laporanWaktu} onChange={e => setLaporanWaktu(e.target.value)} className="w-full dark:bg-stone-100 dark:bg-black/50 bg-stone-50 border border-stone-300 dark:border-white/10 rounded-xl p-3 text-sm focus:border-green-500 focus:outline-none">
+                    <option value="Semua">Semua Waktu</option>
+                    <option value="hari_ini">Hari Ini</option>
+                    <option value="minggu_ini">Minggu Ini</option>
+                    <option value="bulan_ini">Bulan Ini</option>
+                    <option value="tahun_ini">Tahun Ini</option>
+                  </select>
+                </div>
+              </div>
+
+              <TiltCard className="border dark:border-white/5 border-stone-200 dark:border-white/5 print:shadow-none print:border-none print:p-0">
+                <div className="mb-8 print:mb-6">
+                  {/* KOP SURAT */}
+                  <div className="flex justify-center pb-2">
+                    <div className="flex items-center gap-4 md:gap-8">
+                      <img src="/logo-stikom.png" alt="Logo" className="w-20 h-20 md:w-28 md:h-28 object-contain print:w-32 print:h-32 grayscale-0 print:grayscale-0 flex-shrink-0" />
+                      <div className="text-center flex flex-col items-center justify-center font-serif">
+                        <h1 className="text-lg md:text-2xl font-black print:text-black uppercase tracking-wide leading-tight">SEKOLAH TINGGI ILMU KOMPUTER</h1>
+                        <h1 className="text-lg md:text-2xl font-black print:text-black uppercase tracking-wide leading-tight">(STIKOM) 22 JANUARI KENDARI</h1>
+                        <p className="text-[10px] md:text-xs font-bold print:text-black mt-1">SK. MENRISTEK DIKTI RI NO. 1212 / KPT / I / 2018</p>
+                        <p className="text-[10px] md:text-xs font-bold print:text-black leading-tight">TERAKREDITASI BAN-PT</p>
+                        <p className="text-[10px] md:text-xs print:text-black mt-1">Sekretariat : Jln. MT. Haryono No. 79 Kendari - Sulawesi Tenggara</p>
+                        <p className="text-[10px] md:text-xs print:text-black leading-tight">Contact Center : 0812 4402 3900 / 0853 4021 2491 &nbsp; e-mail : stikom22jnrkdi@gmail.com</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Garis Kop Surat (Garis Ganda) */}
+                  <div className="w-full border-b-[3px] border-foreground print:border-black mb-[2px]"></div>
+                  <div className="w-full border-b-[1px] border-foreground print:border-black mb-6"></div>
+
+                  <div className="text-center">
+                    <h2 className="text-lg font-bold print:text-black uppercase underline underline-offset-4">Laporan Rekapitulasi Presensi Mahasiswa</h2>
+                    <p className="text-stone-500 dark:text-stone-400 text-sm mt-2 print:text-black">Dicetak pada: {new Date().toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+                  </div>
+                  
+                  {/* Print Filters Info */}
+                  <div className="hidden print:flex flex-wrap justify-center gap-x-6 gap-y-2 mt-4 text-xs font-bold text-stone-800">
+                    <p>Mata Kuliah: {laporanMK === "Semua" ? "Semua" : data.mataKuliah?.find((m:any) => m.kode_mk === laporanMK)?.nama_mk}</p>
+                    <p>Semester: {laporanSemester === "Semua" ? "Semua" : data.semester?.find((s:any) => s.id_semester.toString() === laporanSemester)?.nama_semester}</p>
+                    <p>Waktu: {laporanWaktu === "Semua" ? "Semua Waktu" : laporanWaktu.replace("_", " ").toUpperCase()}</p>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  <div className="dark:bg-white/5 bg-stone-100 dark:bg-white/5 p-4 rounded-xl text-center"><p className="text-xs text-stone-600 dark:text-stone-300">Total Mahasiswa</p><p className="text-2xl font-black text-amber-500">{data.mhsCount}</p></div>
-                  <div className="dark:bg-white/5 bg-stone-100 dark:bg-white/5 p-4 rounded-xl text-center"><p className="text-xs text-stone-600 dark:text-stone-300">Total Dosen</p><p className="text-2xl font-black text-orange-500">{data.dosenCount}</p></div>
-                  <div className="dark:bg-white/5 bg-stone-100 dark:bg-white/5 p-4 rounded-xl text-center"><p className="text-xs text-stone-600 dark:text-stone-300">Mata Kuliah</p><p className="text-2xl font-black text-blue-500">{data.mkCount}</p></div>
-                  <div className="dark:bg-white/5 bg-stone-100 dark:bg-white/5 p-4 rounded-xl text-center"><p className="text-xs text-stone-600 dark:text-stone-300">Total Presensi</p><p className="text-2xl font-black text-green-500">{data.totalPresensi}</p></div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 print:mb-6">
+                  <div className="dark:bg-white/5 bg-stone-100 dark:bg-white/5 print:bg-transparent print:border print:border-black/20 p-4 rounded-xl text-center"><p className="text-xs text-stone-600 dark:text-stone-300 print:text-black">Total Mahasiswa</p><p className="text-2xl font-black text-amber-500 print:text-black">{new Set(laporanData.map(d => d.nim)).size}</p></div>
+                  <div className="dark:bg-white/5 bg-stone-100 dark:bg-white/5 print:bg-transparent print:border print:border-black/20 p-4 rounded-xl text-center"><p className="text-xs text-stone-600 dark:text-stone-300 print:text-black">Total Dosen</p><p className="text-2xl font-black text-orange-500 print:text-black">{new Set(laporanData.map(d => d.nidn)).size}</p></div>
+                  <div className="dark:bg-white/5 bg-stone-100 dark:bg-white/5 print:bg-transparent print:border print:border-black/20 p-4 rounded-xl text-center"><p className="text-xs text-stone-600 dark:text-stone-300 print:text-black">Mata Kuliah</p><p className="text-2xl font-black text-blue-500 print:text-black">{new Set(laporanData.filter(d=>d.kode_mk).map(d => d.kode_mk)).size}</p></div>
+                  <div className="dark:bg-white/5 bg-stone-100 dark:bg-white/5 print:bg-transparent print:border print:border-black/20 p-4 rounded-xl text-center"><p className="text-xs text-stone-600 dark:text-stone-300 print:text-black">Total Presensi</p><p className="text-2xl font-black text-green-500 print:text-black">{laporanData.length}</p></div>
                 </div>
 
-                <h3 className="text-lg font-bold mb-4">Detail Presensi</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead><tr className="text-left text-stone-500 dark:text-stone-400 border-b dark:border-white/5 border-stone-200 dark:border-white/5">
-                      <th className="pb-3">No</th><th className="pb-3">NIM</th><th className="pb-3">Nama Mahasiswa</th><th className="pb-3">Dosen</th><th className="pb-3">Waktu</th><th className="pb-3">Status</th>
-                    </tr></thead>
-                    <tbody>
-                      {(data.presensiTerbaru || []).map((p: any, i: number) => (
-                        <tr key={i} className="border-b dark:border-white/5 border-stone-200 dark:border-white/5">
-                          <td className="py-3 text-stone-500 dark:text-stone-400">{i + 1}</td>
-                          <td className="py-3 font-mono text-amber-600 dark:text-amber-400">{p.nim}</td>
-                          <td className="py-3">{p.mahasiswa?.nama_mahasiswa || "-"}</td>
-                          <td className="py-3 text-stone-600 dark:text-stone-300">{p.dosen?.nama_dosen || "-"}</td>
-                          <td className="py-3 text-stone-600 dark:text-stone-300">{new Date(p.waktu_absen).toLocaleString("id-ID")}</td>
-                          <td className="py-3"><span className={`px-2 py-1 rounded-full text-xs font-bold ${p.status === "Hadir" ? "bg-green-500/20 text-green-600 dark:text-green-400" : "bg-red-500/20 text-red-600 dark:text-red-400"}`}>{p.status}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <h3 className="text-lg font-bold mb-4 print:text-black">Detail Presensi</h3>
+                
+                {loadingLaporan ? (
+                  <p className="text-center py-8 text-stone-500">Memuat data laporan...</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm print:text-xs">
+                      <thead><tr className="text-left text-stone-500 dark:text-stone-400 border-b dark:border-white/5 border-stone-200 dark:border-white/5 print:border-black print:text-black">
+                        <th className="pb-3">No</th><th className="pb-3">NIM</th><th className="pb-3">Nama Mahasiswa</th><th className="pb-3">Dosen</th><th className="pb-3">Waktu</th><th className="pb-3">Status</th>
+                      </tr></thead>
+                      <tbody>
+                        {laporanData.map((p: any, i: number) => (
+                          <tr key={i} className="border-b dark:border-white/5 border-stone-200 dark:border-white/5 print:border-black/20 print:text-black">
+                            <td className="py-3 text-stone-500 dark:text-stone-400 print:text-black">{i + 1}</td>
+                            <td className="py-3 font-mono text-amber-600 dark:text-amber-400 print:text-black">{p.nim}</td>
+                            <td className="py-3">{p.mahasiswa?.nama_mahasiswa || "-"}</td>
+                            <td className="py-3 text-stone-600 dark:text-stone-300 print:text-black">{p.dosen?.nama_dosen || "-"}</td>
+                            <td className="py-3 text-stone-600 dark:text-stone-300 print:text-black">{new Date(p.waktu_absen).toLocaleString("id-ID")}</td>
+                            <td className="py-3"><span className={`px-2 py-1 rounded-full text-xs font-bold ${p.status === "Hadir" ? "bg-green-500/20 text-green-600 dark:text-green-400 print:text-black print:bg-transparent" : "bg-red-500/20 text-red-600 dark:text-red-400 print:text-black print:bg-transparent"}`}>{p.status}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {laporanData.length === 0 && <p className="text-center py-8 text-stone-500 print:text-black">Belum ada data absensi untuk filter ini.</p>}
+                  </div>
+                )}
 
-                <div className="mt-10 pt-6 border-t dark:border-white/10 border-stone-200 dark:border-white/10 text-right">
-                  <p className="text-stone-500 dark:text-stone-400 text-sm">Kendari, {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
-                  <p className="text-stone-600 dark:text-stone-300 font-bold mt-1">Ketua STIKOM 22 Januari</p>
+                <div className="mt-10 pt-6 border-t dark:border-white/10 border-stone-200 dark:border-white/10 text-right print:border-black/20">
+                  <p className="text-stone-500 dark:text-stone-400 text-sm print:text-black">Kendari, {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
+                  <p className="text-stone-600 dark:text-stone-300 font-bold mt-1 print:text-black">Ketua STIKOM 22 Januari</p>
                   <div className="h-16" />
-                  <p className="text-stone-600 dark:text-stone-300 font-bold border-t border-dashed border-zinc-700 inline-block pt-2 px-8">( ...................................... )</p>
+                  <p className="text-stone-600 dark:text-stone-300 font-bold border-t border-dashed border-zinc-700 inline-block pt-2 px-8 print:text-black print:border-black">( ...................................... )</p>
                 </div>
               </TiltCard>
             </div>

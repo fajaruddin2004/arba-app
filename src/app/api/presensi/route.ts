@@ -88,6 +88,16 @@ export async function POST(req: Request) {
       }
     });
 
+    // Validasi apakah ruangan dari mata kuliah benar-benar ada di tb_ruangan
+    // Ini mencegah error Foreign key constraint violation jika data ruangan tidak sinkron
+    let validRuangan = null;
+    if (mk?.ruangan) {
+      const isRuanganExist = await prisma.tb_ruangan.findUnique({
+        where: { kode_ruangan: mk.ruangan }
+      });
+      if (isRuanganExist) validRuangan = mk.ruangan;
+    }
+
     // Insert presensi linked to session (menggunakan status dari server, bukan client)
     const newPresensi = await prisma.tb_presensi.create({
       data: {
@@ -95,7 +105,7 @@ export async function POST(req: Request) {
         nidn: sesi.nidn,
         id_sesi: sesi.id_sesi,
         kode_mk: mk?.kode_mk || null,
-        kode_ruangan: mk?.ruangan || null,
+        kode_ruangan: validRuangan,
         lat_mhs: lat_mhs.toString(),
         long_mhs: long_mhs.toString(),
         status: statusPresensi  // Server-validated status
@@ -109,6 +119,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Presensi error:", error);
-    return NextResponse.json({ message: "Terjadi kesalahan", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Terjadi kesalahan API: " + (error.message || error.toString()), error: error.message }, { status: 500 });
   }
 }

@@ -18,18 +18,42 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
     }
 
-    const mhsCount = await prisma.tb_mahasiswa.count();
-    const dosenCount = await prisma.tb_dosen.count();
-    const mkCount = await prisma.tb_mata_kuliah.count();
+    const url = new URL(req.url);
+    const id_jurusan = url.searchParams.get("id_jurusan");
+    const id_semester = url.searchParams.get("id_semester");
+
+    const mhsWhere: any = {};
+    if (id_jurusan) mhsWhere.id_jurusan = parseInt(id_jurusan);
+    if (id_semester) mhsWhere.id_semester = parseInt(id_semester);
+
+    const mkWhere: any = {};
+    if (id_jurusan) mkWhere.id_jurusan = parseInt(id_jurusan);
+    if (id_semester) mkWhere.id_semester = parseInt(id_semester);
+
+    const presensiWhere: any = {};
+    if (id_jurusan || id_semester) {
+      presensiWhere.mahasiswa = {};
+      if (id_jurusan) presensiWhere.mahasiswa.id_jurusan = parseInt(id_jurusan);
+      if (id_semester) presensiWhere.mahasiswa.id_semester = parseInt(id_semester);
+    }
+
+    const dosenWhere: any = {};
+    if (id_jurusan || id_semester) {
+      dosenWhere.matkul = { some: mkWhere };
+    }
+
+    const mhsCount = await prisma.tb_mahasiswa.count({ where: mhsWhere });
+    const dosenCount = await prisma.tb_dosen.count({ where: dosenWhere });
+    const mkCount = await prisma.tb_mata_kuliah.count({ where: mkWhere });
     
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     
     const presensiHariIni = await prisma.tb_presensi.count({
-      where: { waktu_absen: { gte: startOfDay } }
+      where: { waktu_absen: { gte: startOfDay }, ...presensiWhere }
     });
 
-    const totalPresensi = await prisma.tb_presensi.count();
+    const totalPresensi = await prisma.tb_presensi.count({ where: presensiWhere });
 
     // Data presensi 7 hari terakhir untuk grafik
     const sevenDaysAgo = new Date();
@@ -37,7 +61,7 @@ export async function GET(req: Request) {
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
     const presensi7Hari = await prisma.tb_presensi.findMany({
-      where: { waktu_absen: { gte: sevenDaysAgo } },
+      where: { waktu_absen: { gte: sevenDaysAgo }, ...presensiWhere },
       select: { waktu_absen: true, status: true }
     });
 
@@ -70,6 +94,8 @@ export async function GET(req: Request) {
         nim: true, 
         nama_mahasiswa: true, 
         jenis_kelamin: true,
+        id_jurusan: true,
+        id_semester: true,
         jurusan: { select: { nama_jurusan: true } },
         semester: { select: { nama_semester: true } },
         _count: { select: { presensi: true } } 
@@ -96,7 +122,12 @@ export async function GET(req: Request) {
         hari: true,
         waktu: true,
         ruangan: true,
-        dosen: { select: { nama_dosen: true } }
+        nidn: true,
+        dosen: { select: { nama_dosen: true } },
+        id_jurusan: true,
+        id_semester: true,
+        jurusan: { select: { nama_jurusan: true } },
+        semester: { select: { nama_semester: true } }
       },
       orderBy: { nama_mk: "asc" }
     });
@@ -109,6 +140,16 @@ export async function GET(req: Request) {
     // Daftar semester
     const semester = await prisma.tb_semester.findMany({
       orderBy: { id_semester: "asc" }
+    });
+
+    // Daftar ruangan
+    const ruangan = await prisma.tb_ruangan.findMany({
+      orderBy: { kode_ruangan: "asc" }
+    });
+
+    // Daftar kuesioner
+    const kuesioner = await prisma.tb_kuesioner.findMany({
+      orderBy: { id_kuesioner: "asc" }
     });
 
     // Presensi terbaru
@@ -129,7 +170,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       mhsCount, dosenCount, mkCount, presensiHariIni, totalPresensi,
-      chartArray, mahasiswa, dosen, mataKuliah, presensiTerbaru, jurusan, semester
+      chartArray, mahasiswa, dosen, mataKuliah, presensiTerbaru, jurusan, semester, ruangan, kuesioner
     }, { status: 200 });
 
   } catch (error: any) {

@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   ScanLine,
   ClipboardList,
@@ -15,7 +14,10 @@ import {
   ChevronRight,
   ShieldCheck,
   CheckCircle2,
-  XCircle
+  XCircle,
+  BookOpen,
+  Camera,
+  Upload
 } from "lucide-react";
 import QRScanner from "@/components/QRScanner";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -30,62 +32,34 @@ const TiltCard = ({
   className?: string;
   onClick?: () => void;
 }) => {
-  const [isMobile, setIsMobile] = useState(false);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const mouseXSpring = useSpring(x);
-  const mouseYSpring = useSpring(y);
-
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
-
-  useEffect(() => {
-    setIsMobile(window.matchMedia("(pointer: coarse)").matches);
-  }, []);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    if (isMobile) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    x.set((e.clientX - rect.left) / rect.width - 0.5);
-    y.set((e.clientY - rect.top) / rect.height - 0.5);
-  };
-
-  const handleMouseLeave = () => { x.set(0); y.set(0); };
-
   return (
-    <motion.div
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+    <div
       onClick={onClick}
-      style={isMobile ? {} : { rotateX, rotateY, transformStyle: "preserve-3d" }}
-      className={`glass-panel rounded-3xl p-5 md:p-6 relative group transition-all duration-300 ${onClick ? "cursor-pointer active:scale-[0.98]" : ""} ${className}`}
+      className={`glass-panel rounded-3xl p-5 md:p-6 relative group transition-all duration-200 hover:shadow-lg ${onClick ? "cursor-pointer active:scale-[0.98]" : ""} ${className}`}
     >
-      <div
-        style={isMobile ? {} : { transform: "translateZ(30px)" }}
-        className="w-full h-full relative z-10"
-      >
+      <div className="w-full h-full relative z-10">
         {children}
       </div>
       <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-br from-amber-500/10 to-orange-500/10" />
-    </motion.div>
+    </div>
   );
 };
 
 export default function MahasiswaDashboard() {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
+  const [scannerKey, setScannerKey] = useState(0);
   const [scanResult, setScanResult] = useState("");
   const [geoStatus, setGeoStatus] = useState("Mengecek...");
   const [activeTab, setActiveTab] = useState("Dashboard");
-  const [mataKuliah, setMataKuliah] = useState([]);
+  const [mataKuliah, setMataKuliah] = useState<any[]>([]);
+  const [scannedClass, setScannedClass] = useState<any>(null);
+  const [qrToken, setQrToken] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [uploadingFoto, setUploadingFoto] = useState(false);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => setMousePosition({ x: e.clientX, y: e.clientY });
-    window.addEventListener("mousemove", handleMouseMove);
-    
     // Fetch user data
     fetch(`/api/auth/me?t=${Date.now()}`)
       .then(res => res.json())
@@ -100,8 +74,8 @@ export default function MahasiswaDashboard() {
         setLoading(false);
       });
 
-    // Fetch Mata Kuliah for Jadwal
-    fetch(`/api/admin/matakuliah?t=${Date.now()}`)
+    // Fetch Mata Kuliah for Jadwal from Mahasiswa's own API
+    fetch(`/api/mahasiswa/jadwal?t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if(data.data) setMataKuliah(data.data);
@@ -184,7 +158,6 @@ export default function MahasiswaDashboard() {
     }
 
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
       // Bersihkan watchPosition saat komponen di-unmount
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
@@ -192,21 +165,69 @@ export default function MahasiswaDashboard() {
     };
   }, []);
 
-  const handleScanSuccess = async (text: string) => {
+  // Helper: check if geo status allows scanning
+  const isGeoBlocked = () => {
+    return geoStatus.includes("Luar") || geoStatus.includes("⚠️") || geoStatus.includes("Mengecek");
+  };
+
+  const openScanner = () => {
+    if (isGeoBlocked()) {
+      alert("Akses ditolak! Anda berada di luar radius kampus (150m) atau GPS tidak aktif. Pastikan GPS menyala dan Anda berada di area kampus.");
+      return;
+    }
+    setScannerKey(prev => prev + 1); // Force re-mount QRScanner
+    setShowScanner(true);
+  };
+
+  const handleScanSuccess = useCallback(async (text: string) => {
     setShowScanner(false);
     setScanResult(text);
     
     try {
-      const qrData = JSON.parse(text);
-      if (!qrData.qr_token) throw new Error("Format QR Code tidak valid atau bukan QR sesi aktif.");
+      let token = "";
+      
+      // Parse token from either URL (native camera) or JSON (old format)
+      if (text.includes("token=")) {
+        const urlParams = new URLSearchParams(text.split('?')[1] || text);
+        token = urlParams.get("token") || "";
+      } else {
+        try {
+          const qrData = JSON.parse(text);
+          token = qrData.qr_token;
+        } catch (e) {
+          token = "";
+        }
+      }
 
+      if (!token) throw new Error("Format QR Code tidak valid atau bukan QR sesi aktif.");
+
+      // Check session details BEFORE attending
+      const checkRes = await fetch(`/api/presensi/check?token=${token}`);
+      const checkData = await checkRes.json();
+
+      if (!checkRes.ok) throw new Error(checkData.message);
+
+      // Show confirmation modal
+      setScannedClass(checkData.sesi);
+      setQrToken(token);
+      
+    } catch (err: any) {
+      alert("Gagal memverifikasi QR: " + err.message);
+    }
+  }, []);
+
+  const confirmAbsensi = async () => {
+    if (!qrToken) return;
+    setConfirming(true);
+
+    try {
       const coords = (window as any).mhsCoords || { lat: 0, lng: 0, status: "Unknown" };
 
       const res = await fetch("/api/presensi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          qr_token: qrData.qr_token,
+          qr_token: qrToken,
           lat_mhs: coords.lat,
           long_mhs: coords.lng,
           status: coords.status
@@ -217,11 +238,106 @@ export default function MahasiswaDashboard() {
       if (!res.ok) throw new Error(data.message);
 
       alert("Berhasil! " + data.message);
-      window.location.reload(); // Refresh to get updated history
+      setScannedClass(null);
+      window.location.reload();
     } catch (err: any) {
       alert("Gagal scan: " + err.message);
+    } finally {
+      setConfirming(false);
     }
   };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validasi ukuran (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Ukuran gambar terlalu besar! Maksimal 2MB.");
+      return;
+    }
+
+    setUploadingFoto(true);
+
+    try {
+      // Kompresi dan convert ke Base64 menggunakan Canvas
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = async () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 300;
+          const MAX_HEIGHT = 300;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Convert ke WebP Base64 untuk ukuran super kecil
+          const base64String = canvas.toDataURL("image/webp", 0.8);
+
+          // Upload ke server
+          const res = await fetch("/api/mahasiswa/profil", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ foto_profil: base64String })
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message);
+
+          // Update state
+          setUserData({
+            ...userData,
+            mahasiswa: {
+              ...userData.mahasiswa,
+              foto_profil: data.foto_profil
+            }
+          });
+          
+          alert("Foto profil berhasil diperbarui!");
+          setUploadingFoto(false);
+        };
+      };
+    } catch (err: any) {
+      alert("Gagal mengupload foto: " + err.message);
+      setUploadingFoto(false);
+    }
+  };
+
+  // Handle native camera scan (URL parameter auto-scan)
+  useEffect(() => {
+    if (!userData || userData.role !== "MAHASISWA") return;
+    
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+    const token = params.get('token');
+    
+    if (action === 'scan' && token) {
+      // Tunggu sebentar untuk memastikan geolocation terisi
+      setTimeout(() => {
+        handleScanSuccess(`?token=${token}`);
+        // Bersihkan URL dari parameter agar tidak otomatis absen ulang saat refresh
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 1000);
+    }
+  }, [userData, handleScanSuccess]);
 
 
 
@@ -236,21 +352,19 @@ export default function MahasiswaDashboard() {
   const mhs = userData.mahasiswa;
   const history = mhs?.presensi || [];
 
+  // Determine schedule for today
+  const hariIniStr = new Date().toLocaleDateString("id-ID", { weekday: "long" });
+  const mataKuliahHariIni = mataKuliah.filter(mk => mk.hari?.toLowerCase() === hariIniStr.toLowerCase());
+  const mkSekarang = mataKuliahHariIni.length > 0 ? mataKuliahHariIni[0] : null;
+
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden relative flex flex-col lg:flex-row">
-      {/* Global Parallax Background */}
-      <motion.div
-        className="absolute inset-0 z-0 opacity-30 pointer-events-none"
-        animate={{
-          x: mousePosition.x * -0.02,
-          y: mousePosition.y * -0.02,
-        }}
-        transition={{ type: "tween", ease: "easeOut", duration: 0.5 }}
-      >
+      {/* Background Glow */}
+      <div className="absolute inset-0 z-0 opacity-30 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-500/20 rounded-full blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-500/20 rounded-full blur-[120px]" />
-      </motion.div>
+      </div>
 
       {/* Sidebar Desktop */}
       <aside className="hidden lg:flex w-64 h-screen border-r border-glass-border glass-panel z-20 flex-col items-start rounded-r-[40px] sticky top-0">
@@ -277,11 +391,7 @@ export default function MahasiswaDashboard() {
               key={i}
               onClick={() => {
                 if (item.label === "Absensi QR") {
-                  if (geoStatus.includes("Luar") || geoStatus.includes("GPS") || geoStatus.includes("⚠️")) {
-                    alert("Akses ditolak! Anda berada di luar radius kampus (150m) atau GPS tidak aktif. Pastikan GPS menyala dan Anda berada di area kampus.");
-                    return;
-                  }
-                  setShowScanner(true);
+                  openScanner();
                 } else {
                   setActiveTab(item.label);
                 }
@@ -295,9 +405,9 @@ export default function MahasiswaDashboard() {
               <item.icon size={20} className={activeTab === item.label ? "text-amber-600 dark:text-amber-400" : ""} />
               <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
               {activeTab === item.label && (
-                <motion.div layoutId="active-nav-mhs" className="ml-auto">
+                <div className="ml-auto">
                   <div className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_10px_#fbbf24]" />
-                </motion.div>
+                </div>
               )}
             </button>
           ))}
@@ -343,11 +453,7 @@ export default function MahasiswaDashboard() {
             key={i}
             onClick={() => {
               if (item.label === "Absensi QR") {
-                if (geoStatus.includes("Luar") || geoStatus.includes("GPS") || geoStatus.includes("⚠️")) {
-                  alert("Akses ditolak! Anda berada di luar radius kampus (150m) atau GPS tidak aktif. Pastikan GPS menyala dan Anda berada di area kampus.");
-                  return;
-                }
-                setShowScanner(true);
+                openScanner();
               } else {
                 setActiveTab(item.label);
               }
@@ -381,7 +487,11 @@ export default function MahasiswaDashboard() {
                 <span className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full animate-pulse shadow-[0_0_10px_#ea580c]" />
               </button>
               <div className="w-10 h-10 rounded-full dark:bg-zinc-800 bg-zinc-100 border-2 border-amber-500 overflow-hidden shadow-[0_0_15px_rgba(245,158,11,0.3)]">
-                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${mhs?.nama}`} alt="Profile" />
+                <img 
+                  src={mhs?.foto_profil || `https://api.dicebear.com/7.x/avataaars/svg?seed=${mhs?.nama_mahasiswa}`} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
           </header>
@@ -419,24 +529,24 @@ export default function MahasiswaDashboard() {
               </TiltCard>
 
               {/* Quick Time */}
-              <TiltCard className="flex flex-col justify-center items-center text-center">
+              <TiltCard className="flex flex-col justify-center items-center text-center bg-gradient-to-br from-white/5 to-white/0">
                 <Clock size={40} className="text-amber-500 mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
-                <h4 className="text-lg font-medium text-foreground/80 dark:text-zinc-300">Mata Kuliah Tersedia</h4>
-                <p className="text-2xl font-bold text-foreground dark:text-white mt-2">{mataKuliah.length > 0 ? (mataKuliah[0] as any).nama_mk : "Belum Ada"}</p>
-                <p className="text-orange-600 dark:text-orange-400 mt-1 font-medium">{mataKuliah.length > 0 && (mataKuliah[0] as any).hari ? `${(mataKuliah[0] as any).hari}, ${(mataKuliah[0] as any).waktu}` : "-"}</p>
-                <p className="text-sm text-stone-500 dark:text-stone-400 dark:text-zinc-500 mt-1">{mataKuliah.length > 0 ? ((mataKuliah[0] as any).ruangan || "Ruangan Belum Ditentukan") : "-"}</p>
+                <h4 className="text-lg font-medium text-foreground/80 dark:text-zinc-300">Jadwal Anda Hari Ini</h4>
+                <p className="text-2xl font-bold text-foreground dark:text-white mt-2">
+                  {mkSekarang ? mkSekarang.nama_mk : "Kosong"}
+                </p>
+                <p className="text-orange-600 dark:text-orange-400 mt-1 font-medium">
+                  {mkSekarang ? `${mkSekarang.waktu} WIB` : "Tidak ada jadwal"}
+                </p>
+                <p className="text-sm text-stone-500 dark:text-stone-400 dark:text-zinc-500 mt-1">
+                  {mkSekarang ? (mkSekarang.ruangan || "Ruangan Belum Ditentukan") : "-"}
+                </p>
               </TiltCard>
 
               {/* Scan Absensi Card - Main Action */}
               <TiltCard 
                 className="md:col-span-2 group border border-amber-500/20 hover:border-amber-500/50 bg-gradient-to-br from-amber-500/10 to-transparent"
-                onClick={() => {
-                  if (geoStatus.includes("Luar") || geoStatus.includes("Mati")) {
-                    alert("Akses ditolak! Anda berada di luar radius aman kampus (50m) atau GPS tidak aktif.");
-                    return;
-                  }
-                  setShowScanner(true);
-                }}
+                onClick={() => openScanner()}
               >
                 <div className="flex justify-between items-center h-full">
                   <div className="space-y-3 md:space-y-4">
@@ -489,7 +599,10 @@ export default function MahasiswaDashboard() {
                       <div className={`w-2 h-2 rounded-full ${item.status === "Hadir" ? "bg-green-500 shadow-[0_0_10px_#22c55e]" : "bg-red-500 shadow-[0_0_10px_#ef4444]"}`} />
                       <div>
                         <p className="font-bold text-foreground dark:text-white">{item.dosen?.nama_dosen || item.nidn}</p>
-                        <p className="text-xs text-stone-600 dark:text-stone-300 dark:text-zinc-400">{new Date(item.waktu_absen).toLocaleString("id-ID")}</p>
+                        <p className="text-xs text-stone-600 dark:text-stone-300 dark:text-zinc-400">
+                          {item.mata_kuliah?.nama_mk ? <span className="font-semibold text-amber-600 dark:text-amber-500">{item.mata_kuliah.nama_mk} {" • "} </span> : ""}
+                          {new Date(item.waktu_absen).toLocaleString("id-ID")}
+                        </p>
                       </div>
                     </div>
                     <div className={`px-3 py-1 rounded-full text-xs font-medium border ${item.status === "Hadir" ? "bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/20" : "bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/20"}`}>
@@ -538,27 +651,79 @@ export default function MahasiswaDashboard() {
           )}
 
           {activeTab === "Profil" && (
-            <TiltCard className="w-full border dark:border-stone-800 border-stone-200 animate-in fade-in zoom-in-95 duration-500">
+            <TiltCard className="w-full border dark:border-stone-800 border-stone-200 animate-in fade-in zoom-in-95 duration-500 bg-gradient-to-br from-white/5 to-transparent">
               <div className="flex flex-col md:flex-row gap-10 items-center md:items-start p-4">
-                 <div className="w-32 h-32 rounded-full dark:bg-stone-900 bg-stone-100 border-4 border-amber-500 overflow-hidden shadow-[0_0_30px_rgba(245,158,11,0.4)] shrink-0">
-                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${mhs?.nama_mahasiswa}`} alt="Profile" className="w-full h-full object-cover" />
+                 
+                 {/* Area Upload Foto */}
+                 <div className="relative group shrink-0">
+                   <div className={`w-32 h-32 md:w-40 md:h-40 rounded-full dark:bg-stone-900 bg-stone-100 border-4 border-amber-500 overflow-hidden shadow-[0_0_30px_rgba(245,158,11,0.4)] ${uploadingFoto ? "opacity-50" : ""}`}>
+                      <img 
+                        src={mhs?.foto_profil || `https://api.dicebear.com/7.x/avataaars/svg?seed=${mhs?.nama_mahasiswa}`} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover" 
+                      />
+                   </div>
+                   
+                   {/* Tombol Overlay Upload */}
+                   <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity backdrop-blur-sm border-4 border-transparent">
+                     {uploadingFoto ? (
+                       <span className="text-white font-bold text-xs animate-pulse">Menyimpan...</span>
+                     ) : (
+                       <>
+                         <Camera className="text-white mb-1" size={24} />
+                         <span className="text-white text-[10px] font-bold tracking-wider uppercase">Ubah Foto</span>
+                       </>
+                     )}
+                     <input 
+                       type="file" 
+                       accept="image/png, image/jpeg, image/jpg, image/webp" 
+                       className="hidden" 
+                       onChange={handleFileUpload}
+                       disabled={uploadingFoto}
+                     />
+                   </label>
                  </div>
-                 <div className="space-y-4 text-center md:text-left flex-1">
-                    <div>
-                      <h2 className="text-4xl font-black text-foreground dark:text-white">{mhs?.nama_mahasiswa}</h2>
-                      <p className="text-xl text-amber-500 font-medium mt-1">NIM: {mhs?.nim}</p>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                       <div className="dark:bg-stone-900 bg-stone-100/50 p-4 rounded-xl border dark:border-stone-800 border-stone-200">
-                          <p className="text-xs text-stone-500 dark:text-stone-400 dark:text-stone-500 uppercase font-bold tracking-wider mb-1">Program Studi</p>
-                          <p className="text-foreground dark:text-white font-medium">S1 Sistem Informasi</p>
-                       </div>
-                       <div className="dark:bg-stone-900 bg-stone-100/50 p-4 rounded-xl border dark:border-stone-800 border-stone-200">
-                          <p className="text-xs text-stone-500 dark:text-stone-400 dark:text-stone-500 uppercase font-bold tracking-wider mb-1">Status Mahasiswa</p>
-                          <p className="text-green-600 dark:text-green-400 font-medium">Terdaftar Aktif</p>
-                       </div>
-                    </div>
 
+                 {/* Detail Mahasiswa */}
+                 <div className="space-y-4 text-center md:text-left flex-1 w-full">
+                    <div>
+                      <h2 className="text-3xl md:text-4xl font-black text-foreground dark:text-white">{mhs?.nama_mahasiswa}</h2>
+                      <p className="text-xl text-amber-500 font-bold mt-1 tracking-wider">{mhs?.nim}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                       <div className="dark:bg-black/40 bg-white/50 p-4 rounded-2xl border dark:border-white/5 border-stone-200 col-span-2 shadow-sm">
+                          <p className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold tracking-widest mb-1">Program Studi</p>
+                          <p className="text-foreground dark:text-white font-bold text-lg">{mhs?.jurusan?.nama_jurusan || "Belum diatur"}</p>
+                       </div>
+                       
+                       <div className="dark:bg-black/40 bg-white/50 p-4 rounded-2xl border dark:border-white/5 border-stone-200 col-span-2 shadow-sm">
+                          <p className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold tracking-widest mb-1">Semester Saat Ini</p>
+                          <p className="text-foreground dark:text-white font-bold text-lg">{mhs?.semester?.nama_semester || "Belum diatur"}</p>
+                       </div>
+
+                       <div className="dark:bg-black/40 bg-white/50 p-4 rounded-2xl border dark:border-white/5 border-stone-200 shadow-sm flex flex-col items-center justify-center text-center">
+                          <p className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold tracking-widest mb-1">Matkul Reguler</p>
+                          <p className="text-amber-600 dark:text-amber-500 font-black text-3xl">{mataKuliah.length}</p>
+                       </div>
+
+                       <div className="dark:bg-black/40 bg-white/50 p-4 rounded-2xl border dark:border-white/5 border-stone-200 shadow-sm flex flex-col items-center justify-center text-center">
+                          <p className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold tracking-widest mb-1">Persentase Hadir</p>
+                          <p className="text-green-600 dark:text-green-500 font-black text-3xl">
+                             {mataKuliah.length > 0 ? Math.min(100, Math.round(((userData?.mahasiswa?.presensi?.length || 0) / (mataKuliah.length * 16)) * 100)) : 0}%
+                          </p>
+                       </div>
+                       
+                       <div className="dark:bg-green-500/10 bg-green-100 p-4 rounded-2xl border dark:border-green-500/20 border-green-200 col-span-2 shadow-sm flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white shrink-0">
+                            <CheckCircle2 size={24} />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-green-700 dark:text-green-400 uppercase font-bold tracking-widest mb-1">Status Mahasiswa</p>
+                            <p className="text-green-800 dark:text-green-300 font-bold text-lg">Terdaftar Aktif</p>
+                          </div>
+                       </div>
+                    </div>
                  </div>
               </div>
             </TiltCard>
@@ -567,9 +732,9 @@ export default function MahasiswaDashboard() {
       </main>
 
       {/* Modal Scanner QR */}
-      {showScanner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center dark:bg-black/80 bg-black/20 backdrop-blur-md p-4">
-          <div className="bg-background border border-amber-500/30 rounded-3xl p-6 w-full max-w-md relative shadow-[0_0_50px_rgba(245,158,11,0.2)]">
+      {showScanner && !scannedClass && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <div className="bg-background border border-amber-500/30 rounded-3xl p-6 w-full max-w-md relative shadow-[0_0_50px_rgba(245,158,11,0.2)] animate-in zoom-in-95 duration-300">
             <button 
               onClick={() => setShowScanner(false)}
               className="absolute top-3 right-3 w-10 h-10 flex items-center justify-center rounded-full dark:bg-stone-800 bg-stone-200 text-foreground/80 dark:text-stone-300 hover:text-foreground dark:text-white hover:bg-stone-700 active:scale-95 transition-all z-10"
@@ -577,7 +742,67 @@ export default function MahasiswaDashboard() {
               <XCircle size={24} />
             </button>
             <h3 className="text-xl font-bold text-amber-500 mb-4 text-center">Scan QR Dosen</h3>
-            <QRScanner onScanSuccess={handleScanSuccess} />
+            <QRScanner key={scannerKey} onScanSuccess={handleScanSuccess} />
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Absensi */}
+      {scannedClass && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+          <div className="bg-background border border-amber-500/50 rounded-3xl p-8 w-full max-w-md relative shadow-[0_0_100px_rgba(245,158,11,0.3)] animate-in slide-in-from-bottom-10 duration-500">
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 rounded-full bg-amber-500/20 border-2 border-amber-500 flex items-center justify-center text-amber-500 glow-amber">
+                <CheckCircle2 size={40} />
+              </div>
+            </div>
+            
+            <h3 className="text-2xl font-black text-center mb-2">Konfirmasi Kehadiran</h3>
+            <p className="text-center text-stone-500 dark:text-stone-400 mb-8 text-sm">QR Code berhasil dibaca. Pastikan detail kelas di bawah ini sudah sesuai sebelum Anda menekan tombol konfirmasi.</p>
+            
+            <div className="space-y-4 mb-8">
+              <div className="bg-stone-100 dark:bg-black/50 p-4 rounded-2xl border border-stone-200 dark:border-white/5 flex items-start gap-4">
+                <BookOpen size={24} className="text-amber-500 shrink-0 mt-1" />
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-stone-500">Mata Kuliah</p>
+                  <p className="font-black text-lg text-foreground dark:text-white">{scannedClass.nama_mk}</p>
+                  <p className="text-sm font-medium text-amber-600 dark:text-amber-500">{scannedClass.kode_mk} • {scannedClass.sks} SKS</p>
+                </div>
+              </div>
+
+              <div className="bg-stone-100 dark:bg-black/50 p-4 rounded-2xl border border-stone-200 dark:border-white/5 flex items-start gap-4">
+                <User size={24} className="text-orange-500 shrink-0 mt-1" />
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-stone-500">Dosen Pengampu</p>
+                  <p className="font-bold text-foreground dark:text-white">{scannedClass.dosen}</p>
+                </div>
+              </div>
+
+              <div className="bg-stone-100 dark:bg-black/50 p-4 rounded-2xl border border-stone-200 dark:border-white/5 flex items-start gap-4">
+                <MapPin size={24} className={geoStatus.includes("Dalam") ? "text-green-500 shrink-0 mt-1" : "text-red-500 shrink-0 mt-1"} />
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-stone-500">Lokasi Anda (GPS)</p>
+                  <p className={`font-bold ${geoStatus.includes("Dalam") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>{geoStatus}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={confirmAbsensi}
+                disabled={confirming}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-black font-black text-lg hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] transition-all flex items-center justify-center gap-2"
+              >
+                {confirming ? "Mencatat..." : "Hadir Sekarang"}
+              </button>
+              <button 
+                onClick={() => { setScannedClass(null); setQrToken(""); }}
+                disabled={confirming}
+                className="w-full py-4 rounded-xl bg-stone-200 dark:bg-white/5 text-stone-700 dark:text-white font-bold hover:bg-stone-300 dark:hover:bg-white/10 transition-colors"
+              >
+                Batal
+              </button>
+            </div>
           </div>
         </div>
       )}

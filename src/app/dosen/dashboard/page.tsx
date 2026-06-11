@@ -5,7 +5,6 @@ import { QrCode, BookOpen, LogOut, ChevronRight, Users, CheckCircle2, Home, User
 import { QRCodeSVG } from "qrcode.react";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 
 const TiltCard = ({
   children,
@@ -16,41 +15,13 @@ const TiltCard = ({
   className?: string;
   onClick?: () => void;
 }) => {
-  const [isMobile, setIsMobile] = useState(false);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const mouseXSpring = useSpring(x);
-  const mouseYSpring = useSpring(y);
-
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
-
-  useEffect(() => {
-    setIsMobile(window.matchMedia("(pointer: coarse)").matches);
-  }, []);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    if (isMobile) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    x.set((e.clientX - rect.left) / rect.width - 0.5);
-    y.set((e.clientY - rect.top) / rect.height - 0.5);
-  };
-
-  const handleMouseLeave = () => { x.set(0); y.set(0); };
-
   return (
-    <motion.div
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+    <div
       onClick={onClick}
-      style={isMobile ? {} : { rotateY, rotateX, transformStyle: "preserve-3d" }}
-      className={`glass-card p-5 md:p-6 lg:p-8 rounded-3xl ${onClick ? "cursor-pointer active:scale-[0.98] transition-transform" : ""} ${className}`}
+      className={`glass-card p-5 md:p-6 lg:p-8 rounded-3xl transition-all duration-200 hover:shadow-lg ${onClick ? "cursor-pointer active:scale-[0.98]" : ""} ${className}`}
     >
-      <div style={isMobile ? {} : { transform: "translateZ(30px)", transformStyle: "preserve-3d" }} className="h-full">
-        {children}
-      </div>
-    </motion.div>
+      {children}
+    </div>
   );
 };
 
@@ -240,9 +211,9 @@ export default function DosenDashboard() {
               <item.icon size={20} className={activeTab === item.label ? "text-orange-600 dark:text-orange-400" : ""} />
               <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
               {activeTab === item.label && (
-                <motion.div layoutId="active-nav-dosen" className="ml-auto">
+                <div className="ml-auto">
                   <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_10px_#f97316]" />
-                </motion.div>
+                </div>
               )}
             </button>
           ))}
@@ -279,7 +250,7 @@ export default function DosenDashboard() {
           { icon: Home, label: "Dashboard" },
           { icon: QrCode, label: "Sesi Kelas" },
           { icon: BookOpen, label: "Hasil Evaluasi" },
-          { icon: Calendar, label: "Jadwal" },
+          { icon: Calendar, label: "Jadwal Mengajar" },
           { icon: User, label: "Profil" },
         ].map((item, i) => (
           <button
@@ -292,7 +263,7 @@ export default function DosenDashboard() {
             }`}
           >
             <item.icon size={20} className={activeTab === item.label ? "drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]" : ""} />
-            <span className="text-[10px] font-medium">{item.label}</span>
+            <span className="text-[10px] font-medium">{item.label === "Jadwal Mengajar" ? "Jadwal" : item.label}</span>
           </button>
         ))}
       </nav>
@@ -412,9 +383,10 @@ export default function DosenDashboard() {
                       <div className="text-left">
                         <label className="text-sm text-foreground/70 dark:text-stone-400 mb-2 block font-medium">Pilih Mata Kuliah</label>
                         <select 
-                          className="w-full bg-white dark:bg-[#1a110b] border border-orange-500/30 text-foreground dark:text-white rounded-xl px-4 py-4 outline-none focus:border-orange-500 transition-colors"
+                          className="w-full bg-white dark:bg-[#1a110b] border border-orange-500/30 text-foreground dark:text-white rounded-xl px-4 py-4 outline-none focus:border-orange-500 transition-colors relative z-20 pointer-events-auto"
                           value={selectedMk}
                           onChange={(e) => setSelectedMk(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <option value="">-- Pilih Mata Kuliah --</option>
                           {mataKuliahList.map((mk: any) => (
@@ -424,9 +396,9 @@ export default function DosenDashboard() {
                       </div>
                       
                       <button 
-                        onClick={handleBukaSesi}
+                        onClick={(e) => { e.stopPropagation(); handleBukaSesi(); }}
                         disabled={isCreatingSession || !selectedMk}
-                        className="w-full relative group overflow-hidden px-6 md:px-8 py-5 rounded-2xl font-black text-base md:text-lg transition-all active:scale-[0.97] hover:scale-[1.02] shadow-[0_0_30px_rgba(249,115,22,0.3)] bg-gradient-to-r from-orange-500 to-amber-500 text-black disabled:opacity-50 disabled:hover:scale-100 min-h-[56px] mt-4"
+                        className="w-full relative overflow-hidden px-6 md:px-8 py-5 rounded-2xl font-black text-base md:text-lg transition-all active:scale-[0.97] hover:scale-[1.02] shadow-[0_0_30px_rgba(249,115,22,0.3)] bg-gradient-to-r from-orange-500 to-amber-500 text-black disabled:opacity-50 disabled:hover:scale-100 min-h-[56px] mt-4 z-20 pointer-events-auto"
                       >
                         <span className="relative flex items-center justify-center gap-3">
                           {isCreatingSession ? "Membuka Sesi..." : "Generate Barcode Sesi Baru"} <ChevronRight className="transition-transform" />
@@ -436,8 +408,8 @@ export default function DosenDashboard() {
                   ) : (
                     <>
                       <button 
-                        onClick={handleTutupSesi}
-                        className="w-full relative group overflow-hidden px-6 md:px-8 py-5 rounded-2xl font-black text-base md:text-lg transition-all active:scale-[0.97] hover:scale-[1.02] shadow-[0_0_30px_rgba(239,68,68,0.3)] bg-red-500/10 text-red-500 border-2 border-red-500/50 min-h-[56px]"
+                        onClick={(e) => { e.stopPropagation(); handleTutupSesi(); }}
+                        className="w-full relative overflow-hidden px-6 md:px-8 py-5 rounded-2xl font-black text-base md:text-lg transition-all active:scale-[0.97] hover:scale-[1.02] shadow-[0_0_30px_rgba(239,68,68,0.3)] bg-red-500/10 text-red-500 border-2 border-red-500/50 min-h-[56px] z-20 pointer-events-auto"
                       >
                         <span className="relative flex items-center justify-center gap-3">
                           ✕ Tutup Sesi Kuliah Sekarang
@@ -478,7 +450,7 @@ export default function DosenDashboard() {
                     <div className="p-6 bg-white border-8 border-stone-900 rounded-3xl shadow-2xl relative">
                       <div className="absolute -inset-4 bg-orange-500/20 blur-xl rounded-[3rem] -z-10 animate-pulse"></div>
                       <QRCodeSVG 
-                        value={JSON.stringify({ qr_token: activeSession.qr_token })} 
+                        value={`${window.location.origin}/mahasiswa/dashboard?action=scan&token=${activeSession.qr_token}`} 
                         size={280}
                         bgColor={"#ffffff"}
                         fgColor={"#000000"}
@@ -500,13 +472,14 @@ export default function DosenDashboard() {
                           type="text" 
                           value={manualNim} 
                           onChange={(e) => setManualNim(e.target.value)} 
+                          onClick={(e) => e.stopPropagation()}
                           placeholder="Masukkan NIM Mahasiswa" 
-                          className="flex-1 dark:bg-[#1a110b] bg-white border border-orange-500/30 text-foreground dark:text-white rounded-xl px-4 py-3 outline-none focus:border-orange-500 transition-colors"
+                          className="flex-1 dark:bg-[#1a110b] bg-white border border-orange-500/30 text-foreground dark:text-white rounded-xl px-4 py-3 outline-none focus:border-orange-500 transition-colors relative z-20 pointer-events-auto"
                         />
                         <button 
-                          onClick={handleManualAttendance} 
+                          onClick={(e) => { e.stopPropagation(); handleManualAttendance(); }} 
                           disabled={isManualLoading || !manualNim}
-                          className="px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-black font-bold disabled:opacity-50 transition-colors"
+                          className="px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-black font-bold disabled:opacity-50 transition-colors relative z-20 pointer-events-auto"
                         >
                           {isManualLoading ? "..." : "Hadirkan"}
                         </button>

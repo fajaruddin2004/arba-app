@@ -77,18 +77,7 @@ export default function RegisterPage() {
         {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 rounded-xl text-sm text-center">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-stone-700 dark:text-stone-400 uppercase tracking-wider">Peran (Role)</label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="w-full bg-white/50 dark:bg-black/40 border border-white/60 dark:border-white/10 rounded-xl p-3 text-stone-900 dark:text-white focus:border-amber-500 dark:focus:border-amber-500 focus:bg-white/80 dark:focus:bg-black/60 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all shadow-inner [&>option]:bg-white [&>option]:text-stone-900 dark:[&>option]:bg-[#0a0502] dark:[&>option]:text-white"
-            >
-              <option value="DOSEN">Dosen</option>
-              <option value="ADMIN">Admin</option>
-            </select>
-          </div>
+          {/* Role is hardcoded to DOSEN */}
 
           <div className="space-y-1">
             <label className="text-xs font-bold text-stone-700 dark:text-stone-400 uppercase tracking-wider">Nama Lengkap</label>
@@ -99,10 +88,10 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-stone-700 dark:text-stone-400 uppercase tracking-wider">{formData.role === "MAHASISWA" ? "NIM" : formData.role === "DOSEN" ? "NIDN" : "NIP Pegawai"}</label>
+            <label className="text-xs font-bold text-stone-700 dark:text-stone-400 uppercase tracking-wider">NIDN</label>
             <div className="relative">
               <Hash size={18} className="absolute left-3 top-3.5 text-stone-600 dark:text-stone-500" />
-              <input required type="text" name="nim_nidn" value={formData.nim_nidn} onChange={handleChange} className="w-full bg-white/50 dark:bg-black/40 border border-white/60 dark:border-white/10 rounded-xl p-3 pl-10 text-stone-900 dark:text-white focus:border-amber-500 dark:focus:border-amber-500 focus:bg-white/80 dark:focus:bg-black/60 focus:outline-none transition-all shadow-inner placeholder:text-stone-500 dark:placeholder:text-stone-400" placeholder={`Masukkan ${formData.role === "MAHASISWA" ? "NIM" : formData.role === "DOSEN" ? "NIDN" : "NIP Pegawai"}...`} />
+              <input required type="text" name="nim_nidn" value={formData.nim_nidn} onChange={handleChange} className="w-full bg-white/50 dark:bg-black/40 border border-white/60 dark:border-white/10 rounded-xl p-3 pl-10 text-stone-900 dark:text-white focus:border-amber-500 dark:focus:border-amber-500 focus:bg-white/80 dark:focus:bg-black/60 focus:outline-none transition-all shadow-inner placeholder:text-stone-500 dark:placeholder:text-stone-400" placeholder="Masukkan NIDN..." />
             </div>
           </div>
 

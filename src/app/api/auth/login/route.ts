@@ -7,10 +7,10 @@ const JWT_SECRET = process.env.JWT_SECRET || "rahasia-stikom-22j";
 
 export async function POST(req: Request) {
   try {
-    const { username, password } = await req.json();
+    const { username, password, role } = await req.json();
 
-    if (!username || !password) {
-      return NextResponse.json({ message: "Missing fields" }, { status: 400 });
+    if (!username || !password || !role) {
+      return NextResponse.json({ message: "Semua field harus diisi termasuk role login" }, { status: 400 });
     }
 
     const user = await prisma.tb_user.findUnique({
@@ -19,6 +19,11 @@ export async function POST(req: Request) {
 
     if (!user) {
       return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
+    }
+
+    // Pimpinan can login via Admin role selection, but otherwise role must match
+    if (user.role !== role && !(user.role === "PIMPINAN" && role === "ADMIN")) {
+      return NextResponse.json({ message: "Akun ini tidak terdaftar sebagai " + role }, { status: 403 });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);

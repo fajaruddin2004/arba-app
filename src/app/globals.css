@@ -94,3 +94,11 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255,255,255,0.2);
 }
+
+/* ===== PRINT LAYOUT ===== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 20mm;
+  }
+}

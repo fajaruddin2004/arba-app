@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
     }
 
-    const { kode_mk, nama_mk, sks, nidn, hari, waktu, ruangan } = await req.json();
+    const { kode_mk, nama_mk, sks, nidn, hari, waktu, ruangan, id_jurusan, id_semester } = await req.json();
 
     if (!kode_mk || !nama_mk || !sks) {
       return NextResponse.json({ message: "Semua field wajib diisi (Kode, Nama, SKS)" }, { status: 400 });
@@ -38,7 +38,9 @@ export async function POST(req: Request) {
         nidn: nidn || null,
         hari: hari || null,
         waktu: waktu || null,
-        ruangan: ruangan || null
+        ruangan: ruangan || null,
+        id_jurusan: id_jurusan ? parseInt(id_jurusan) : null,
+        id_semester: id_semester ? parseInt(id_semester) : null
       }
     });
 
@@ -90,9 +92,21 @@ export async function GET(req: Request) {
         hari: true,
         waktu: true,
         ruangan: true,
+        id_jurusan: true,
+        id_semester: true,
         dosen: {
           select: {
             nama_dosen: true
+          }
+        },
+        jurusan: {
+          select: {
+            nama_jurusan: true
+          }
+        },
+        semester: {
+          select: {
+            nama_semester: true
           }
         }
       },
@@ -115,7 +129,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
     }
 
-    const { kode_mk, nama_mk, sks, nidn, hari, waktu, ruangan } = await req.json();
+    const { kode_mk, nama_mk, sks, nidn, hari, waktu, ruangan, id_jurusan, id_semester } = await req.json();
 
     if (!kode_mk || !nama_mk || !sks) {
       return NextResponse.json({ message: "Semua field wajib diisi (Kode, Nama, SKS)" }, { status: 400 });
@@ -129,7 +143,9 @@ export async function PUT(req: Request) {
         nidn: nidn || null,
         hari: hari || null,
         waktu: waktu || null,
-        ruangan: ruangan || null
+        ruangan: ruangan || null,
+        id_jurusan: id_jurusan ? parseInt(id_jurusan) : null,
+        id_semester: id_semester ? parseInt(id_semester) : null
       }
     });
 

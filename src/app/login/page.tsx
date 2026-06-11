@@ -2,16 +2,18 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Fingerprint, Mail, Lock, ChevronRight } from "lucide-react";
+import { Fingerprint, Mail, Lock, ChevronRight, Eye, EyeOff, ShieldCheck, GraduationCap, Users } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     username: "",
     password: "",
+    role: "MAHASISWA",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -29,19 +31,30 @@ export default function LoginPage() {
         body: JSON.stringify(formData),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      const contentType = res.headers.get("content-type");
+      let data;
+      
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        console.error("Server returned non-JSON:", text.substring(0, 200));
+        throw new Error("Terjadi kesalahan server (Internal Server Error)");
+      }
+
+      if (!res.ok) throw new Error(data.message || "Login gagal");
 
       // Redirect based on role
+      const searchParams = typeof window !== 'undefined' ? window.location.search : '';
       if (data.role === "ADMIN" || data.role === "PIMPINAN") {
-        router.push("/admin/dashboard");
+        router.push("/admin/dashboard" + searchParams);
       } else if (data.role === "DOSEN") {
-        router.push("/dosen/dashboard");
+        router.push("/dosen/dashboard" + searchParams);
       } else {
-        router.push("/mahasiswa/dashboard");
+        router.push("/mahasiswa/dashboard" + searchParams);
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Terjadi kesalahan yang tidak diketahui");
     } finally {
       setLoading(false);
     }
@@ -76,6 +89,29 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <label className="text-xs font-bold text-stone-700 dark:text-stone-400 uppercase tracking-wider">
+              Login Sebagai
+            </label>
+            <div className="grid grid-cols-3 gap-2 mt-1">
+              {[
+                { id: "MAHASISWA", label: "Mahasiswa", icon: GraduationCap },
+                { id: "DOSEN", label: "Dosen", icon: Users },
+                { id: "ADMIN", label: "Admin", icon: ShieldCheck }
+              ].map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, role: r.id })}
+                  className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border transition-all ${formData.role === r.id ? "bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400 font-bold" : "bg-white/50 dark:bg-black/40 border-stone-200 dark:border-white/10 text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-white/5"}`}
+                >
+                  <r.icon size={18} />
+                  <span className="text-[10px] uppercase tracking-wider">{r.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-stone-700 dark:text-stone-400 uppercase tracking-wider">
               NIM / NIDN / Username
             </label>
             <div className="relative">
@@ -87,7 +123,7 @@ export default function LoginPage() {
                 value={formData.username} 
                 onChange={handleChange} 
                 className="w-full bg-white/50 dark:bg-black/40 border border-white/60 dark:border-white/10 rounded-xl p-3 pl-10 text-stone-900 dark:text-white focus:border-amber-500 dark:focus:border-amber-500 focus:bg-white/80 dark:focus:bg-black/60 focus:outline-none transition-all shadow-inner placeholder:text-stone-500 dark:placeholder:text-stone-400" 
-                placeholder="Masukkan NIM / NIDN / Username Anda..." 
+                placeholder={formData.role === "MAHASISWA" ? "Masukkan NIM..." : formData.role === "DOSEN" ? "Masukkan NIDN..." : "Masukkan Username..."} 
               />
             </div>
           </div>
@@ -96,7 +132,22 @@ export default function LoginPage() {
             <label className="text-xs font-bold text-stone-700 dark:text-stone-400 uppercase tracking-wider">Password</label>
             <div className="relative">
               <Lock size={18} className="absolute left-3 top-3.5 text-stone-600 dark:text-stone-500" />
-              <input required type="password" name="password" value={formData.password} onChange={handleChange} className="w-full bg-white/50 dark:bg-black/40 border border-white/60 dark:border-white/10 rounded-xl p-3 pl-10 text-stone-900 dark:text-white focus:border-amber-500 dark:focus:border-amber-500 focus:bg-white/80 dark:focus:bg-black/60 focus:outline-none transition-all shadow-inner placeholder:text-stone-500 dark:placeholder:text-stone-400" placeholder="••••••••" />
+              <input 
+                required 
+                type={showPassword ? "text" : "password"} 
+                name="password" 
+                value={formData.password} 
+                onChange={handleChange} 
+                className="w-full bg-white/50 dark:bg-black/40 border border-white/60 dark:border-white/10 rounded-xl p-3 pl-10 pr-10 text-stone-900 dark:text-white focus:border-amber-500 dark:focus:border-amber-500 focus:bg-white/80 dark:focus:bg-black/60 focus:outline-none transition-all shadow-inner placeholder:text-stone-500 dark:placeholder:text-stone-400" 
+                placeholder="••••••••" 
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3.5 text-stone-500 hover:text-stone-800 dark:hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
@@ -107,11 +158,17 @@ export default function LoginPage() {
           >
             {loading ? "Memverifikasi..." : <>Login <ChevronRight size={20} /></>}
           </button>
+          
+          <div className="pt-4 text-center border-t border-stone-200 dark:border-white/10 mt-6">
+            <p className="text-sm text-stone-600 dark:text-stone-400">
+              Belum punya akun? <br className="sm:hidden" />
+              <a href="/register" className="text-amber-600 dark:text-amber-400 font-bold hover:underline ml-1">
+                Daftar sebagai Dosen
+              </a>
+            </p>
+          </div>
         </form>
 
-        <p className="mt-6 text-center text-stone-700 dark:text-stone-500 text-sm">
-          Belum punya akun? <a href="/register" className="text-amber-600 dark:text-amber-500 font-bold hover:underline">Daftar di sini</a>
-        </p>
       </div>
     </div>
   );

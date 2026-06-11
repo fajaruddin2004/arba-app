@@ -20,12 +20,14 @@ model tb_jurusan {
   id_jurusan   Int            @id @default(autoincrement())
   nama_jurusan String
   mahasiswa    tb_mahasiswa[]
+  matkul       tb_mata_kuliah[]
 }
 
 model tb_semester {
   id_semester   Int            @id @default(autoincrement())
   nama_semester String
   mahasiswa     tb_mahasiswa[]
+  matkul       tb_mata_kuliah[]
 }
 
 model tb_mahasiswa {
@@ -35,6 +37,7 @@ model tb_mahasiswa {
   id_jurusan      Int?
   id_semester     Int?
   jenis_kelamin   String?
+  foto_profil     String?     @db.Text
 
   user     tb_user      @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
   jurusan  tb_jurusan?  @relation(fields: [id_jurusan], references: [id_jurusan])
@@ -48,6 +51,7 @@ model tb_dosen {
   nidn       String @id
   id_user    Int    @unique
   nama_dosen String
+  foto_profil String? @db.Text
 
   user     tb_user         @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
   presensi tb_presensi[]
@@ -62,10 +66,14 @@ model tb_mata_kuliah {
   sks     Int
   nidn    String?
   hari    String?
-  waktu   String?
-  ruangan String?
-  dosen   tb_dosen? @relation(fields: [nidn], references: [nidn])
-  presensi tb_presensi[]
+  waktu       String?
+  ruangan     String?
+  id_jurusan  Int?
+  id_semester Int?
+  dosen       tb_dosen?    @relation(fields: [nidn], references: [nidn])
+  jurusan     tb_jurusan?  @relation(fields: [id_jurusan], references: [id_jurusan])
+  semester    tb_semester? @relation(fields: [id_semester], references: [id_semester])
+  presensi    tb_presensi[]
 }
 
 model tb_ruangan {
