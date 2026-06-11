@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     // Pimpinan can login via Admin role selection, but otherwise role must match
-    if (user.role !== role && !(user.role === "PIMPINAN" && role === "ADMIN")) {
+    if (user.role?.toUpperCase() !== role?.toUpperCase() && !(user.role?.toUpperCase() === "PIMPINAN" && role?.toUpperCase() === "ADMIN")) {
       return NextResponse.json({ message: "Akun ini tidak terdaftar sebagai " + role }, { status: 403 });
     }
 

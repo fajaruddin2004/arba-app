@@ -1,8 +1,20 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    if (!token) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || "rahasia-stikom-22j");
+    const userRole = decoded.role?.toUpperCase();
+    if (userRole !== "ADMIN" && userRole !== "PIMPINAN") {
+      return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
+    }
+
     const data = await req.json();
     if (!data.pertanyaan) {
       return NextResponse.json({ message: "Pertanyaan wajib diisi" }, { status: 400 });
@@ -23,6 +35,16 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    if (!token) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || "rahasia-stikom-22j");
+    const userRole = decoded.role?.toUpperCase();
+    if (userRole !== "ADMIN" && userRole !== "PIMPINAN") {
+      return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
+    }
+
     const data = await req.json();
 
     // Bulk toggle status
@@ -67,6 +89,16 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    if (!token) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || "rahasia-stikom-22j");
+    const userRole = decoded.role?.toUpperCase();
+    if (userRole !== "ADMIN" && userRole !== "PIMPINAN") {
+      return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 

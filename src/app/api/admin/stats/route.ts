@@ -14,7 +14,8 @@ export async function GET(req: Request) {
     if (!token) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
 
     const decoded: any = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== "ADMIN" && decoded.role !== "PIMPINAN") {
+    const userRole = decoded.role?.toUpperCase();
+    if (userRole !== "ADMIN" && userRole !== "PIMPINAN") {
       return NextResponse.json({ message: "Akses ditolak" }, { status: 403 });
     }
 
